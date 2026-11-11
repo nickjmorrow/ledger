@@ -1,18 +1,23 @@
+# Build output
 .build/
 *.noindex/
-.env
 DerivedData/
-xcuserdata/
-*.xcodeproj/project.xcworkspace/
-import/
-*.sqlite
-.DS_Store
-App/Ledger.xcodeproj/
 App/build*/
-*.xcuserstate
-.impeccable/
-CLAUDE.local.md
-App/Force.xcodeproj/
+App/Ledger.xcodeproj/
 
-# Planning notes (kept on disk, not published)
+# Xcode user state
+xcuserdata/
+*.xcuserstate
+
+# Local data and secrets
+*.sqlite
+.env
+import/
+CLAUDE.local.md
+
+# macOS
+.DS_Store
+
+# Tool state and planning notes
+.impeccable/
 docs/questions.html
