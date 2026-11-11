@@ -1,0 +1,18 @@
+.build/
+*.noindex/
+.env
+DerivedData/
+xcuserdata/
+*.xcodeproj/project.xcworkspace/
+import/
+*.sqlite
+.DS_Store
+App/Ledger.xcodeproj/
+App/build*/
+*.xcuserstate
+.impeccable/
+CLAUDE.local.md
+App/Force.xcodeproj/
+
+# Planning notes (kept on disk, not published)
+docs/questions.html

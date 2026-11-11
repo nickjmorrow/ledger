@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>Label</key><string>com.nicholai.ledger-hub</string>
+  <key>ProgramArguments</key>
+  <array>
+    <string>/Users/CHANGEME/.local/bin/ledger</string>
+    <string>sync-serve</string>
+    <string>--db</string><string>/Users/CHANGEME/ledger-hub/ledger.sqlite</string>
+    <string>--tokens</string><string>/Users/CHANGEME/ledger-hub/tokens.json</string>
+    <string>--port</string><string>8793</string>
+  </array>
+  <key>EnvironmentVariables</key>
+  <dict><key>LEDGER_DEVICE</key><string>hub</string></dict>
+  <key>RunAtLoad</key><true/>
+  <key>KeepAlive</key><true/>
+  <key>StandardOutPath</key><string>/Users/CHANGEME/Library/Logs/ledger-hub.log</string>
+  <key>StandardErrorPath</key><string>/Users/CHANGEME/Library/Logs/ledger-hub.log</string>
+</dict>
+</plist>

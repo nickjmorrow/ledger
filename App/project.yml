@@ -1,0 +1,95 @@
+name: Ledger
+options:
+  bundleIdPrefix: com.nicholai
+  deploymentTarget:
+    macOS: "15.0"
+    iOS: "18.0"
+  createIntermediateGroups: true
+settings:
+  base:
+    SWIFT_VERSION: "6.0"
+    MARKETING_VERSION: "0.1.0"
+    CURRENT_PROJECT_VERSION: "1"
+packages:
+  LedgerUI:
+    path: ../UI
+schemes:
+  # Running from Xcode installs the optimized build: a Debug build of the app, LedgerCore and GRDB is about 3x slower on the phone.
+  LedgeriOS:
+    build:
+      targets:
+        LedgeriOS: all
+    run:
+      config: Release
+    test:
+      config: Debug
+    profile:
+      config: Release
+    archive:
+      config: Release
+targets:
+  Ledger:
+    type: application
+    platform: macOS
+    sources: [Mac]
+    dependencies:
+      - package: LedgerUI
+    info:
+      path: Mac/Info.plist
+      properties:
+        CFBundleDisplayName: Ledger
+        # The sync hub is reached over Tailscale by plain HTTP (the tunnel is encrypted); App Transport Security would refuse that.
+        NSAppTransportSecurity:
+          NSAllowsArbitraryLoads: true
+        # Default hub, injected from .env at project generation (see scripts/generate-project.sh). Settings overrides them.
+        LedgerHubURL: $(LEDGER_HUB_URL)
+        LedgerHubToken: $(LEDGER_HUB_TOKEN)
+        LedgerHubHost: $(LEDGER_HUB_HOST)
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.nicholai.ledger
+        PRODUCT_NAME: Ledger
+        LEDGER_HUB_URL: ${LEDGER_HUB_URL}
+        LEDGER_HUB_TOKEN: ${LEDGER_HUB_TOKEN}
+        LEDGER_HUB_HOST: ${LEDGER_HUB_HOST}
+        GENERATE_INFOPLIST_FILE: YES
+        INFOPLIST_KEY_CFBundleDisplayName: Ledger
+        INFOPLIST_KEY_LSApplicationCategoryType: public.app-category.productivity
+        CODE_SIGN_IDENTITY: "-"
+        CODE_SIGN_STYLE: Automatic
+        ENABLE_APP_SANDBOX: NO
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        ENABLE_HARDENED_RUNTIME: NO
+        SWIFT_STRICT_CONCURRENCY: minimal
+        SWIFT_VERSION: "5.0"
+  LedgeriOS:
+    type: application
+    platform: iOS
+    sources: [iOS]
+    info:
+      path: iOS/Info.plist
+      properties:
+        NSAppTransportSecurity:
+          NSAllowsArbitraryLoads: true
+        LedgerHubURL: $(LEDGER_HUB_URL)
+        LedgerHubToken: $(LEDGER_HUB_TOKEN)
+        LedgerHubHost: $(LEDGER_HUB_HOST)
+    dependencies:
+      - package: LedgerUI
+    settings:
+      base:
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        PRODUCT_BUNDLE_IDENTIFIER: com.nicholai.ledger.ios
+        DEVELOPMENT_TEAM: ${DEVELOPMENT_TEAM}
+        PRODUCT_NAME: Ledger
+        LEDGER_HUB_URL: ${LEDGER_HUB_URL}
+        LEDGER_HUB_TOKEN: ${LEDGER_HUB_TOKEN}
+        LEDGER_HUB_HOST: ${LEDGER_HUB_HOST}
+        GENERATE_INFOPLIST_FILE: YES
+        INFOPLIST_KEY_CFBundleDisplayName: Ledger
+        INFOPLIST_KEY_UILaunchScreen_Generation: YES
+        INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone: "UIInterfaceOrientationPortrait"
+        TARGETED_DEVICE_FAMILY: "1"
+        CODE_SIGN_STYLE: Automatic
+        SWIFT_STRICT_CONCURRENCY: minimal
+        SWIFT_VERSION: "5.0"
