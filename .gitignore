@@ -15,8 +15,9 @@ xcuserdata/
 import/
 CLAUDE.local.md
 
-# macOS
+# macOS and Python
 .DS_Store
+__pycache__/
 
 # Tool state and planning notes
 .impeccable/
