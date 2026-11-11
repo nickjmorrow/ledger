@@ -2,7 +2,7 @@
 
 A personal task tracker in the style of Linear. Native Swift app for Mac and iPhone, one SQLite database on a home server as the hub, a CLI and MCP server for Claude.
 
-Scope of the first version: native Swift; a hub reached over Tailscale; no login (the tailnet is the lock, plus one bearer token per device); list and board views, ⌘K, Linear's shortcuts, Markdown descriptions, labels, priority, due dates, cycles, sub-issues, search, filters, saved views, projects, recurring tasks; six fixed statuses; automatic 2-week cycles; MOR-n issue numbers; a one-time import from Linear's API (or a Linear connector dump); CLI and MCP for Claude; Midnight Sun look; nightly backup copy on the hub.
+Scope of the first version: native Swift; a hub reached over Tailscale; no login (the tailnet is the lock, plus one bearer token per device); list and board views, ⌘K, Linear's shortcuts, Markdown descriptions, labels, priority, due dates, cycles, sub-issues, search, filters, saved views, projects, recurring tasks; six fixed statuses; automatic 2-week cycles; MOR-n issue numbers; a one-time import from a JSON export of Linear issues and cycles; CLI and MCP for Claude; Midnight Sun look; nightly backup copy on the hub.
 
 ## Layout
 
@@ -39,11 +39,11 @@ create / update / delete issue; set status (stamps completedAt, canceledAt, star
 
 ## Import
 
-`ledger import-linear` reads Linear (API key `LINEAR_API_KEY`, or a JSON dump file made through the Linear connector) and upserts by `linearId`, so it can be re-run until cutover. Keeps number, status, priority, labels, dueDate, cycle (with its number and dates), parent, created/started/completed/canceled/archived dates. Comments and attachments are not imported.
+`ledger import-linear` reads a JSON export of Linear (one or more pages of issues, as Linear's `list_issues` returns them, plus the `list_cycles` result) and keys each issue by `linearId`, so it can be re-run until cutover: issues already imported are skipped, or replaced with `--overwrite`. Keeps number, status, priority, labels, dueDate, cycle (with its number and dates), parent, created/started/completed/canceled/archived dates. Comments and attachments are not imported.
 
 ## App
 
-Mac: sidebar (Inbox, Today, Cycle, Projects, Views, Labels), list and board, detail pane, ⌘K. iPhone: tabs, list, detail sheet, quick add. Shortcuts as Linear: C create, S status, P priority, L label, D due, A assignee not needed. Midnight Sun colors (deep navy surfaces, one sunshine-yellow accent; see `UI/Sources/LedgerUI/Theme.swift`).
+Mac: sidebar (Inbox, Today, Cycle, Projects, Views, Labels), list and board, detail pane, ⌘K. iPhone: tabs, list, detail sheet, quick add. Single-key shortcuts as in Linear, active when no text field has focus: C create, S status, P priority, L label, D due date, J/K move, / search. Midnight Sun colors (deep navy surfaces, one sunshine-yellow accent; see `UI/Sources/LedgerUI/Theme.swift`).
 
 ## Claude
 
