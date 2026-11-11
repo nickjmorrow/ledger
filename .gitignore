@@ -3,7 +3,7 @@
 *.noindex/
 DerivedData/
 App/build*/
-App/Ledger.xcodeproj/
+App/*.xcodeproj/
 
 # Xcode user state
 xcuserdata/
