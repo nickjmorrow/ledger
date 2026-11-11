@@ -23,6 +23,16 @@ private func run(_ args: String..., db: String, device: String = "dev1") async -
     await Runner.run(args + ["--db", db, "--device", device])
 }
 
+@Suite struct HelpTests {
+    @Test func helpPrintsUsage() async {
+        for args in [["--help"], ["issue", "--help"], ["issue", "create", "--help"]] {
+            let r = await Runner.run(args)
+            #expect(r.code == 0, Comment(rawValue: r.err))
+            #expect(r.out.contains("USAGE"))
+        }
+    }
+}
+
 @Suite struct IssueCommandTests {
     @Test func createEditListRoundTrip() async throws {
         let db = tempDB()

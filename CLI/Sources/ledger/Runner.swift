@@ -43,6 +43,8 @@ enum Runner {
             if var async = command as? AsyncParsableCommand { try await async.run() } else { try command.run() }
             return RunResult(code: 0, out: buffer.text, err: "")
         } catch {
+            // Asking for help (`ledger --help`, `ledger issue --help`) reaches here as an error that means "success".
+            if !(error is LedgerError), LedgerCommand.exitCode(for: error) == .success { return RunResult(code: 0, out: LedgerCommand.fullMessage(for: error) + "\n", err: "") }
             return RunResult(code: 1, out: "", err: errorJSON("\(error)"))
         }
     }
