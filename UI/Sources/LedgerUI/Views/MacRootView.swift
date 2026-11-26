@@ -33,6 +33,7 @@ public struct MacRootView: View {
         } message: { Text(model.error ?? "") }
         .preferredColorScheme(.dark).tint(Theme.accent)
         .background(Theme.background)
+        .toolbar(removing: .title)
         .toolbarBackground(Theme.bar, for: .windowToolbar)
         .onAppear {
             keys.install(model); model.start()
@@ -145,10 +146,28 @@ private struct Content: View {
     var body: some View {
         @Bindable var model = model
         VStack(spacing: 0) {
-            HStack(spacing: 10) {
-                Text(model.title).font(Theme.serif(.title3))
-                Text("\(model.visible.count)").foregroundStyle(Theme.faint)
-                Spacer()
+            switch model.scope {
+            case .projects where !model.searching: ProjectsView()
+            default:
+                if case .cycle = model.scope, !model.searching { CycleHeader(cycle: model.cycle({ if case let .cycle(id) = model.scope { return id ?? model.currentCycleID } else { return nil } }())) }
+                FilterBar()
+                Divider().overlay(Theme.line)
+                if model.layout == .board, !model.isPlainList { BoardView() } else { IssueList() }
+            }
+        }
+        .background(Theme.background)
+        // One bar for the whole window: the screen's title on the left, search and actions on the right.
+        .toolbar {
+            ToolbarItem(placement: .navigation) {
+                HStack(spacing: 8) {
+                    Text(model.title).font(Theme.serif(.title3))
+                    Text("\(model.visible.count)").font(Theme.mono()).foregroundStyle(Theme.faint)
+                }
+                .fixedSize()
+            }
+            .titleWithoutGlass()
+            if #available(macOS 26, *) { ToolbarSpacer(.flexible) }
+            ToolbarItemGroup(placement: .primaryAction) {
                 HStack(spacing: 4) {
                     Image(systemName: "magnifyingglass").foregroundStyle(Theme.faint)
                     TextField("Search", text: $model.searchText).textFieldStyle(.plain).focused($searchField).frame(width: 160)
@@ -167,20 +186,15 @@ private struct Content: View {
                 Button { model.compose() } label: { Image(systemName: "plus") }.help("New issue (C)")
                 Button { model.detailOpen.toggle() } label: { Image(systemName: "sidebar.right") }.help("Detail (Return)")
             }
-            .buttonStyle(.plain).foregroundStyle(Theme.dim)
-            .padding(.horizontal, 12).frame(height: 44)
-            Divider().overlay(Theme.line)
-            switch model.scope {
-            case .projects where !model.searching: ProjectsView()
-            default:
-                if case .cycle = model.scope, !model.searching { CycleHeader(cycle: model.cycle({ if case let .cycle(id) = model.scope { return id ?? model.currentCycleID } else { return nil } }())) }
-                FilterBar()
-                Divider().overlay(Theme.line)
-                if model.layout == .board, !model.isPlainList { BoardView() } else { IssueList() }
-            }
         }
-        .background(Theme.background)
         .onChange(of: model.searchFocus) { _, _ in searchField = true }
+    }
+}
+
+private extension ToolbarContent {
+    /// The title reads as text, not as a button in a glass capsule (macOS 26).
+    @ToolbarContentBuilder func titleWithoutGlass() -> some ToolbarContent {
+        if #available(macOS 26, *) { sharedBackgroundVisibility(.hidden) } else { self }
     }
 }
 

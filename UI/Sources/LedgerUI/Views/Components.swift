@@ -173,7 +173,7 @@ struct CycleHeader: View {
             let left = Ledger.date(fromDay: cycle.endsAt).flatMap { Calendar.current.dateComponents([.day], from: Ledger.date(fromDay: Ledger.day())!, to: $0).day } ?? 0
             VStack(alignment: .leading, spacing: 8) {
                 HStack {
-                    Text("Cycle \(cycle.number)").font(Theme.serif(.title3))
+                    // The cycle's name is already the screen's title, so only its dates go here.
                     Text(Format.range(cycle)).font(Theme.mono(.subheadline)).foregroundStyle(Theme.dim)
                     Spacer()
                     Text(left > 0 ? "\(left) days left" : "ended").font(.subheadline).foregroundStyle(Theme.accent)
