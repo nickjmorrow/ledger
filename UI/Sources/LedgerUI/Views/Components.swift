@@ -34,7 +34,7 @@ struct IssueRow: View {
                     .font(.caption).foregroundStyle(Theme.dim)
             }
             if let d = issue.dueDate {
-                Text(Format.due(d)).font(.caption).foregroundStyle(overdue ? Theme.red : Theme.dim)
+                Text(Format.due(d)).font(Theme.mono()).foregroundStyle(overdue ? Theme.red : Theme.dim)
             }
             if issue.recur != nil { Image(systemName: "repeat").font(.caption2).foregroundStyle(Theme.faint) }
         }
@@ -45,7 +45,7 @@ struct IssueRow: View {
                     Text(issue.title).foregroundStyle(issue.status.isClosed ? Theme.dim : Theme.text).lineLimit(2)
                     HStack(spacing: 6) {
                         PriorityGlyph(priority: issue.priority).font(.caption)
-                        Text(issue.identifier).font(.caption.monospacedDigit()).foregroundStyle(Theme.faint)
+                        Text(issue.identifier).font(Theme.mono()).foregroundStyle(Theme.faint)
                         meta
                     }
                 }
@@ -54,7 +54,7 @@ struct IssueRow: View {
         } else {
             HStack(spacing: 8) {
                 PriorityGlyph(priority: issue.priority)
-                Text(issue.identifier).font(.caption.monospacedDigit()).foregroundStyle(Theme.faint).frame(width: 58, alignment: .leading)
+                Text(issue.identifier).font(Theme.mono()).foregroundStyle(Theme.faint).frame(width: 58, alignment: .leading)
                 StatusGlyph(status: issue.status)
                 Text(issue.title).foregroundStyle(issue.status.isClosed ? Theme.dim : Theme.text).lineLimit(1)
                 Spacer(minLength: 8)
@@ -62,7 +62,7 @@ struct IssueRow: View {
             }
             .padding(.horizontal, 12).frame(height: 34)
             .background(selected ? Theme.raised : Color.clear)
-            .overlay(alignment: .leading) { if selected { Rectangle().fill(Theme.sun).frame(width: 2) } }
+            .overlay(alignment: .leading) { if selected { Rectangle().fill(Theme.accent).frame(width: 2) } }
             .contentShape(Rectangle())
         }
     }
@@ -129,7 +129,7 @@ struct FilterBar: View {
         Menu { content() } label: {
             Text(name).font(.caption).padding(.horizontal, 8).padding(.vertical, 3)
                 .foregroundStyle(active ? Theme.bar : Theme.dim)
-                .background(active ? Theme.sun : Theme.field, in: Capsule())
+                .background(active ? Theme.accent : Theme.field, in: Capsule())
         }
         .menuStyle(.button).buttonStyle(.plain).menuIndicator(.hidden).fixedSize()
     }
@@ -143,8 +143,8 @@ struct GroupHeader: View {
         HStack(spacing: 8) {
             Image(systemName: model.collapsed.contains(group.status) ? "chevron.right" : "chevron.down").font(.caption2).foregroundStyle(Theme.faint).frame(width: 12)
             StatusGlyph(status: group.status)
-            Text(group.status.title).font(.subheadline.weight(.semibold)).foregroundStyle(Theme.text)
-            Text("\(group.issues.count)").font(.subheadline).foregroundStyle(Theme.faint)
+            Text(group.status.title).font(Theme.serif(.subheadline)).foregroundStyle(Theme.text)
+            Text("\(group.issues.count)").font(Theme.mono()).foregroundStyle(Theme.faint)
             Spacer()
             #if os(macOS)
             Button { model.compose(status: group.status) } label: { Image(systemName: "plus") }.buttonStyle(.plain).foregroundStyle(Theme.dim)
@@ -173,13 +173,20 @@ struct CycleHeader: View {
             let left = Ledger.date(fromDay: cycle.endsAt).flatMap { Calendar.current.dateComponents([.day], from: Ledger.date(fromDay: Ledger.day())!, to: $0).day } ?? 0
             VStack(alignment: .leading, spacing: 8) {
                 HStack {
-                    Text("Cycle \(cycle.number)").font(.headline)
-                    Text(Format.range(cycle)).foregroundStyle(Theme.dim)
+                    Text("Cycle \(cycle.number)").font(Theme.serif(.title3))
+                    Text(Format.range(cycle)).font(Theme.mono(.subheadline)).foregroundStyle(Theme.dim)
                     Spacer()
-                    Text(left > 0 ? "\(left) days left" : "ended").font(.subheadline).foregroundStyle(Theme.dim)
+                    Text(left > 0 ? "\(left) days left" : "ended").font(.subheadline).foregroundStyle(Theme.accent)
                 }
-                ProgressView(value: Double(done), total: Double(max(mine.count, 1))).tint(Theme.sun)
-                Text("\(done) of \(mine.count) done").font(.caption).foregroundStyle(Theme.dim)
+                // Drawn rather than a ProgressView, whose fill ignores the tint on the Mac.
+                GeometryReader { g in
+                    ZStack(alignment: .leading) {
+                        Capsule().fill(Theme.line)
+                        Capsule().fill(Theme.accent).frame(width: g.size.width * Double(done) / Double(max(mine.count, 1)))
+                    }
+                }
+                .frame(height: 4)
+                Text("\(done) of \(mine.count) done").font(Theme.mono()).foregroundStyle(Theme.dim)
             }
             .padding(12)
         }

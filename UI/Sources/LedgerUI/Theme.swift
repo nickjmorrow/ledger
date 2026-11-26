@@ -1,29 +1,43 @@
 import LedgerCore
 import SwiftUI
 
-/// Midnight Sun palette: navy surfaces, one sun-yellow accent. Dark only.
+/// Vault: warm graphite and ivory, with gold leaf used sparingly, like engraving. Serif titles, monospaced figures,
+/// tight corners. Meant to feel weighty and lasting: a bank, a church and a gym. Dark only.
 public enum Theme {
-    public static let background = Color(hex: 0x0b1120)   // navy 950: content
-    public static let bar = Color(hex: 0x0f172a)          // navy 900: sidebar, bars, sheets
-    public static let card = Color(hex: 0x131d33)         // navy 850: cards, inputs
-    public static let field = Color(hex: 0x18233d)        // navy 800
-    public static let raised = Color(hex: 0x22304f)       // navy 700: selected and hovered rows
-    public static let line = Color(hex: 0x2e3f63)         // navy 600: separators
+    public static let background = Color(hex: 0x141210)   // content
+    public static let bar = Color(hex: 0x0f0d0b)          // sidebar, bars, sheets
+    public static let card = Color(hex: 0x1c1a17)         // cards, inputs
+    public static let field = Color(hex: 0x221f1b)
+    public static let raised = Color(hex: 0x2a2621)       // selected and hovered rows
+    public static let line = Color(hex: 0x38322a)         // hairline rules
 
-    public static let text = Color(hex: 0xe3e8f2)
-    public static let dim = Color(hex: 0x9aa8c2)
-    public static let faint = Color(hex: 0x6b7a96)
+    public static let text = Color(hex: 0xede5d4)         // ivory
+    public static let dim = Color(hex: 0xb7ad9a)
+    public static let faint = Color(hex: 0x8c8371)
 
-    public static let sun = Color(hex: 0xffcc33)
-    public static let red = Color(hex: 0xff6b6b)
-    public static let green = Color(hex: 0x7ee0a1)
-    public static let blue = Color(hex: 0x6ea8ff)
-    public static let magenta = Color(hex: 0xc792ea)
-    public static let cyan = Color(hex: 0x5fd3e6)
-    public static let orange = Color(hex: 0xffa657)
+    public static let accent = Color(hex: 0xc9a55a)       // gold leaf: selection, progress, drop targets, Today
+    public static let red = Color(hex: 0xd47c68)
+    public static let green = Color(hex: 0x8fb68a)
+    public static let blue = Color(hex: 0x90a8ca)
+    public static let magenta = Color(hex: 0xb98ca9)
+    public static let cyan = Color(hex: 0x80b1ad)
+    public static let orange = Color(hex: 0xd39a5e)
+    public static let yellow = Color(hex: 0xd6bf72)
 
     /// Swatches offered for projects and new labels.
-    public static let swatches: [String] = ["#ffcc33", "#ffa657", "#ff6b6b", "#c792ea", "#6ea8ff", "#5fd3e6", "#7ee0a1", "#98a2c4"]
+    public static let swatches: [String] = ["#c9a55a", "#d39a5e", "#d47c68", "#b98ca9", "#90a8ca", "#80b1ad", "#8fb68a", "#d6bf72", "#b7ad9a"]
+
+    public static let radius: CGFloat = 3
+
+    /// Titles and column names: New York.
+    public static func serif(_ style: Font.TextStyle) -> Font { .system(style, design: .serif).weight(.semibold) }
+    /// Identifiers, counts and dates: SF Mono, like figures in a ledger.
+    public static func mono(_ style: Font.TextStyle = .caption) -> Font { .system(style, design: .monospaced) }
+}
+
+extension View {
+    /// Section labels: small letter-spaced capitals.
+    func caps() -> some View { font(.caption2.weight(.semibold)).textCase(.uppercase).tracking(1.4).foregroundStyle(Theme.faint) }
 }
 
 extension Color {
@@ -53,7 +67,7 @@ extension Status {
         switch self {
         case .inbox: return Theme.dim
         case .todo: return Theme.text
-        case .today: return Theme.sun
+        case .today: return Theme.accent
         case .done: return Theme.green
         case .canceled, .duplicate: return Theme.faint
         }
@@ -75,7 +89,7 @@ extension Priority {
         case .none: return Theme.faint
         case .urgent: return Theme.red
         case .high: return Theme.orange
-        case .medium: return Theme.sun
+        case .medium: return Theme.yellow
         case .low: return Theme.blue
         }
     }

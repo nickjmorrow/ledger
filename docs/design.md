@@ -2,7 +2,7 @@
 
 A personal task tracker in the style of Linear. Native Swift app for Mac and iPhone, one SQLite database on a home server as the hub, a CLI and MCP server for Claude.
 
-Scope of the first version: native Swift; a hub reached over Tailscale; no login (the tailnet is the lock, plus one bearer token per device); list and board views, ⌘K, Linear's shortcuts, Markdown descriptions, labels, priority, due dates, cycles, sub-issues, search, filters, saved views, projects, recurring tasks; six fixed statuses; automatic 2-week cycles; MOR-n issue numbers; a one-time import from a JSON export of Linear issues and cycles; CLI and MCP for Claude; Midnight Sun look; nightly backup copy on the hub.
+Scope of the first version: native Swift; a hub reached over Tailscale; no login (the tailnet is the lock, plus one bearer token per device); list and board views, ⌘K, Linear's shortcuts, Markdown descriptions, labels, priority, due dates, cycles, sub-issues, search, filters, saved views, projects, recurring tasks; six fixed statuses; automatic 2-week cycles; MOR-n issue numbers; a one-time import from a JSON export of Linear issues and cycles; CLI and MCP for Claude; Vault look; nightly backup copy on the hub.
 
 ## Layout
 
@@ -43,7 +43,7 @@ create / update / delete issue; set status (stamps completedAt, canceledAt, star
 
 ## App
 
-Mac: sidebar (Inbox, Today, Cycle, Projects, Views, Labels), list and board, detail pane, ⌘K. iPhone: tabs, list, detail sheet, quick add. Single-key shortcuts as in Linear, active when no text field has focus: C create, S status, P priority, L label, D due date, J/K move, / search. Midnight Sun colors (deep navy surfaces, one sunshine-yellow accent; see `UI/Sources/LedgerUI/Theme.swift`).
+Mac: sidebar (Inbox, Current Cycle, All Issues, Views), list and board (columns hidden, shown and reordered per screen), detail pane, ⌘K; labels are managed in Settings. iPhone: tabs (Inbox, Current Cycle, All Issues), list, detail sheet, quick add. Single-key shortcuts as in Linear, active when no text field has focus: C create, S status, P priority, L label, D due date, J/K move, / search. Vault look (warm graphite and ivory, a gold-leaf accent used sparingly, New York serif titles, monospaced figures, 3pt corners; see `UI/Sources/LedgerUI/Theme.swift`).
 
 ## Claude
 

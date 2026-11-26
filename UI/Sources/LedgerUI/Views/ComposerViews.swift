@@ -68,7 +68,7 @@ struct NewIssueView: View {
     }
 
     private func chip(_ s: String) -> some View {
-        Text(s).font(.caption2).padding(.horizontal, 6).padding(.vertical, 1).foregroundStyle(Theme.sun).background(Theme.sun.opacity(0.16), in: Capsule())
+        Text(s).font(.caption2).padding(.horizontal, 6).padding(.vertical, 1).foregroundStyle(Theme.accent).background(Theme.accent.opacity(0.16), in: Capsule())
     }
 
     private func save() {
@@ -105,7 +105,7 @@ struct QuickAddSheet: View {
                 if let d = q.due { Text(Format.due(d)) }
                 ForEach(q.labelIds, id: \.self) { id in if let l = model.label(id) { LabelChip(label: l) } }
             }
-            .font(.caption).foregroundStyle(Theme.sun)
+            .font(.caption).foregroundStyle(Theme.accent)
             Spacer(minLength: 0)
         }
         .padding(16).background(Theme.bar)
@@ -178,7 +178,7 @@ struct ProjectsView: View {
                         }
                         Spacer()
                         if p.status != "active" { Text(p.status.capitalized).font(.caption).foregroundStyle(Theme.faint) }
-                        Text("\(c.open) open / \(c.total)").font(.caption.monospacedDigit()).foregroundStyle(Theme.dim)
+                        Text("\(c.open) open / \(c.total)").font(Theme.mono()).foregroundStyle(Theme.dim)
                     }
                     .contentShape(Rectangle())
                 }

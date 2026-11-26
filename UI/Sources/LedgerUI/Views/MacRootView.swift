@@ -31,7 +31,7 @@ public struct MacRootView: View {
         .alert("Something went wrong", isPresented: Binding { model.error != nil } set: { if !$0 { model.error = nil } }) {
             Button("OK") { model.error = nil }
         } message: { Text(model.error ?? "") }
-        .preferredColorScheme(.dark).tint(Theme.sun)
+        .preferredColorScheme(.dark).tint(Theme.accent)
         .background(Theme.background)
         .toolbarBackground(Theme.bar, for: .windowToolbar)
         .onAppear {
@@ -130,7 +130,7 @@ private struct Sidebar: View {
         HStack {
             Label(name, systemImage: icon)
             Spacer()
-            if count > 0 { Text("\(count)").font(.caption).foregroundStyle(Theme.faint) }
+            if count > 0 { Text("\(count)").font(Theme.mono()).foregroundStyle(Theme.faint) }
         }.tag(scope)
     }
 }
@@ -146,7 +146,7 @@ private struct Content: View {
         @Bindable var model = model
         VStack(spacing: 0) {
             HStack(spacing: 10) {
-                Text(model.title).font(.headline)
+                Text(model.title).font(Theme.serif(.title3))
                 Text("\(model.visible.count)").foregroundStyle(Theme.faint)
                 Spacer()
                 HStack(spacing: 4) {
@@ -154,7 +154,7 @@ private struct Content: View {
                     TextField("Search", text: $model.searchText).textFieldStyle(.plain).focused($searchField).frame(width: 160)
                         .onChange(of: searchField) { _, f in model.searchFocused = f }
                 }
-                .padding(.horizontal, 8).padding(.vertical, 4).background(Theme.field, in: RoundedRectangle(cornerRadius: 6))
+                .padding(.horizontal, 8).padding(.vertical, 4).background(Theme.field, in: RoundedRectangle(cornerRadius: Theme.radius))
                 if model.scope != .projects, !model.isPlainList {
                     Picker("Layout", selection: $model.layout) {
                         Image(systemName: "list.bullet").tag(Layout.list); Image(systemName: "rectangle.split.3x1").tag(Layout.board)
@@ -254,8 +254,8 @@ private struct BoardView: View {
             let g = group
             VStack(spacing: 6) {
                 HStack(spacing: 6) {
-                    StatusGlyph(status: g.status); Text(g.status.title).font(.subheadline.weight(.semibold))
-                    Text("\(g.issues.count)").foregroundStyle(Theme.faint)
+                    StatusGlyph(status: g.status); Text(g.status.title).font(Theme.serif(.body))
+                    Text("\(g.issues.count)").font(Theme.mono()).foregroundStyle(Theme.faint)
                     Spacer()
                     Menu { ColumnMenu(status: g.status, columns: columns) } label: { Image(systemName: "ellipsis") }
                         .menuStyle(.button).menuIndicator(.hidden).buttonStyle(.plain).fixedSize().foregroundStyle(Theme.dim).help("Column options")
@@ -264,9 +264,10 @@ private struct BoardView: View {
                 .padding(.horizontal, 6)
                 .contentShape(Rectangle())
                 .draggable(BoardView.columnPrefix + g.status.rawValue) {
-                    HStack(spacing: 6) { StatusGlyph(status: g.status); Text(g.status.title) }.padding(8).background(Theme.raised, in: RoundedRectangle(cornerRadius: 6))
+                    HStack(spacing: 6) { StatusGlyph(status: g.status); Text(g.status.title) }.padding(8).background(Theme.raised, in: RoundedRectangle(cornerRadius: Theme.radius))
                 }
                 .contextMenu { ColumnMenu(status: g.status, columns: columns) }
+                Rectangle().fill(Theme.line).frame(height: 1)
                 ScrollView {
                     LazyVStack(spacing: 6) {
                         ForEach(g.issues.prefix(g.status.isClosed ? 30 : 500)) { i in Card(issue: i) }
@@ -275,8 +276,8 @@ private struct BoardView: View {
                 }
             }
             .frame(width: 270).padding(8)
-            .background(targeted ? Theme.raised.opacity(0.55) : Theme.bar, in: RoundedRectangle(cornerRadius: 8))
-            .overlay(RoundedRectangle(cornerRadius: 8).strokeBorder(Theme.sun.opacity(targeted ? 0.7 : 0), lineWidth: 1.5))
+            .background(targeted ? Theme.raised.opacity(0.55) : Theme.bar, in: RoundedRectangle(cornerRadius: Theme.radius))
+            .overlay(RoundedRectangle(cornerRadius: Theme.radius).strokeBorder(Theme.accent.opacity(targeted ? 0.7 : 0), lineWidth: 1.5))
             .animation(.easeOut(duration: 0.15), value: targeted)
             .dropDestination(for: String.self) { ids, _ in
                 withAnimation(.snappy(duration: 0.25)) {
@@ -300,12 +301,12 @@ private struct BoardView: View {
         let counts: [Status: Int]
         var body: some View {
             VStack(alignment: .leading, spacing: 4) {
-                Text("Hidden columns").font(.caption.weight(.semibold)).foregroundStyle(Theme.faint).padding(.horizontal, 6).padding(.bottom, 2)
+                Text("Hidden columns").caps().padding(.horizontal, 6).padding(.bottom, 2)
                 ForEach(model.hiddenColumns, id: \.self) { s in
                     HStack(spacing: 6) {
                         StatusGlyph(status: s); Text(s.title).font(.callout)
                         Spacer()
-                        Text("\(counts[s] ?? 0)").font(.caption).foregroundStyle(Theme.faint)
+                        Text("\(counts[s] ?? 0)").font(Theme.mono()).foregroundStyle(Theme.faint)
                     }
                     .padding(.horizontal, 6).frame(height: 26)
                     .contentShape(Rectangle())
@@ -315,7 +316,7 @@ private struct BoardView: View {
                 }
             }
             .frame(width: 170).padding(8)
-            .background(Theme.bar.opacity(0.5), in: RoundedRectangle(cornerRadius: 8))
+            .background(Theme.bar.opacity(0.5), in: RoundedRectangle(cornerRadius: Theme.radius))
             .dropDestination(for: String.self) { ids, _ in
                 let cols = ids.compactMap(BoardView.column(from:))
                 cols.forEach(model.hideColumn)
@@ -331,7 +332,7 @@ private struct BoardView: View {
             let selected = model.selectedID == issue.id
             VStack(alignment: .leading, spacing: 6) {
                 HStack(spacing: 6) {
-                    Text(issue.identifier).font(.caption.monospacedDigit()).foregroundStyle(Theme.faint)
+                    Text(issue.identifier).font(Theme.mono()).foregroundStyle(Theme.faint)
                     Spacer()
                     PriorityGlyph(priority: issue.priority)
                 }
@@ -339,12 +340,12 @@ private struct BoardView: View {
                 HStack(spacing: 4) {
                     ForEach(issue.labels.compactMap { model.label($0) }.prefix(3)) { LabelChip(label: $0) }
                     Spacer()
-                    if let d = issue.dueDate { Text(Format.due(d)).font(.caption).foregroundStyle(Format.isOverdue(issue) ? Theme.red : Theme.dim) }
+                    if let d = issue.dueDate { Text(Format.due(d)).font(Theme.mono()).foregroundStyle(Format.isOverdue(issue) ? Theme.red : Theme.dim) }
                 }
             }
             .padding(10)
-            .background(selected ? Theme.raised : Theme.card, in: RoundedRectangle(cornerRadius: 6))
-            .overlay(RoundedRectangle(cornerRadius: 6).stroke(selected ? Theme.sun : Theme.line, lineWidth: selected ? 1.5 : 0.5))
+            .background(selected ? Theme.raised : Theme.card, in: RoundedRectangle(cornerRadius: Theme.radius))
+            .overlay(RoundedRectangle(cornerRadius: Theme.radius).stroke(selected ? Theme.accent : Theme.line, lineWidth: selected ? 1.5 : 0.5))
             .onTapGesture { model.select(issue.id, open: true) }
             .draggable(issue.id) { DragPreview(issue: issue) }
             .contextMenu { IssueMenu(issue: issue) }
@@ -376,7 +377,7 @@ private struct DisplayOptions: View {
     var body: some View {
         let shown = model.boardColumns
         VStack(alignment: .leading, spacing: 8) {
-            Text("Board columns").font(.subheadline.weight(.semibold))
+            Text("Board columns").caps()
             List {
                 ForEach(shown + model.hiddenColumns, id: \.self) { s in
                     Toggle(isOn: Binding(get: { shown.contains(s) }, set: { _ in model.toggleColumn(s) })) {
@@ -409,15 +410,15 @@ private struct DragPreview: View {
         VStack(alignment: .leading, spacing: 6) {
             HStack(spacing: 6) {
                 StatusGlyph(status: issue.status)
-                Text(issue.identifier).font(.caption.monospacedDigit()).foregroundStyle(Theme.faint)
+                Text(issue.identifier).font(Theme.mono()).foregroundStyle(Theme.faint)
                 Spacer()
                 PriorityGlyph(priority: issue.priority)
             }
             Text(issue.title).font(.callout).foregroundStyle(Theme.text).lineLimit(2).frame(maxWidth: .infinity, alignment: .leading)
         }
         .padding(10).frame(width: 250)
-        .background(Theme.raised, in: RoundedRectangle(cornerRadius: 6))
-        .overlay(RoundedRectangle(cornerRadius: 6).stroke(Theme.sun, lineWidth: 1.5))
+        .background(Theme.raised, in: RoundedRectangle(cornerRadius: Theme.radius))
+        .overlay(RoundedRectangle(cornerRadius: Theme.radius).stroke(Theme.accent, lineWidth: 1.5))
         .rotationEffect(.degrees(-2))
         .padding(12)
     }
@@ -448,7 +449,7 @@ private struct PickerOverlay: View {
                             Group { if let s = o.symbol { if let l = o.level { Image(systemName: s, variableValue: l) } else { Image(systemName: s) } } }.foregroundStyle(o.tint).frame(width: 18)
                             Text(o.title)
                             Spacer()
-                            if o.selected { Image(systemName: "checkmark").foregroundStyle(Theme.sun) }
+                            if o.selected { Image(systemName: "checkmark").foregroundStyle(Theme.accent) }
                             if let h = o.hint { Text(h).font(.caption.monospaced()).foregroundStyle(Theme.faint) }
                         }
                         .padding(.horizontal, 10).frame(height: 30)
@@ -457,8 +458,8 @@ private struct PickerOverlay: View {
                         .onTapGesture { model.choose(o) }
                     }
                 }
-                .frame(width: 280).background(Theme.card, in: RoundedRectangle(cornerRadius: 8))
-                .overlay(RoundedRectangle(cornerRadius: 8).stroke(Theme.line))
+                .frame(width: 280).background(Theme.card, in: RoundedRectangle(cornerRadius: Theme.radius))
+                .overlay(RoundedRectangle(cornerRadius: Theme.radius).stroke(Theme.line))
                 .padding(.top, 120)
             }
         }
@@ -493,7 +494,7 @@ private struct PaletteView: View {
                         LazyVStack(spacing: 0) {
                             ForEach(Array(results.enumerated()), id: \.element.id) { n, r in
                                 HStack(spacing: 10) {
-                                    Image(systemName: r.symbol).foregroundStyle(r.kind == .action ? Theme.sun : Theme.dim).frame(width: 18)
+                                    Image(systemName: r.symbol).foregroundStyle(r.kind == .action ? Theme.accent : Theme.dim).frame(width: 18)
                                     Text(r.title).lineLimit(1)
                                     Spacer()
                                     Text(r.subtitle).font(.caption).foregroundStyle(Theme.faint)
@@ -510,8 +511,8 @@ private struct PaletteView: View {
                     .onChange(of: index) { _, n in if results.indices.contains(n) { proxy.scrollTo(results[n].id) } }
                 }
             }
-            .frame(width: 560).background(Theme.card, in: RoundedRectangle(cornerRadius: 10))
-            .overlay(RoundedRectangle(cornerRadius: 10).stroke(Theme.line))
+            .frame(width: 560).background(Theme.card, in: RoundedRectangle(cornerRadius: Theme.radius))
+            .overlay(RoundedRectangle(cornerRadius: Theme.radius).stroke(Theme.line))
             .padding(.top, 90)
         }
         .onAppear { items = model.paletteItems(); focused = true }

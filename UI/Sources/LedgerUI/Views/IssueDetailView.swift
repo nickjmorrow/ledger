@@ -54,12 +54,12 @@ private struct DetailBody: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 14) {
                 HStack {
-                    Text(issue.identifier).font(.caption.monospacedDigit()).foregroundStyle(Theme.faint)
+                    Text(issue.identifier).font(Theme.mono()).foregroundStyle(Theme.faint)
                     Spacer()
-                    Text("Created \(String(issue.createdAt.prefix(10)))").font(.caption).foregroundStyle(Theme.faint)
+                    Text("Created \(String(issue.createdAt.prefix(10)))").font(Theme.mono()).foregroundStyle(Theme.faint)
                 }
                 TextField("Title", text: $title, axis: .vertical)
-                    .font(.title3.weight(.semibold)).textFieldStyle(.plain)
+                    .font(Theme.serif(.title2)).textFieldStyle(.plain)
                     .modifier(Autosave(text: title, original: issue.title) { t in
                         let clean = t.trimmingCharacters(in: .whitespacesAndNewlines)
                         if !clean.isEmpty { model.edit(issue.id, ["title": .text(clean)]) }
@@ -213,7 +213,7 @@ private struct DetailBody: View {
                 TextEditor(text: $notes)
                     .scrollContentBackground(.hidden).font(.body.monospaced())
                     .frame(minHeight: 140)
-                    .padding(6).background(Theme.card, in: RoundedRectangle(cornerRadius: 6))
+                    .padding(6).background(Theme.card, in: RoundedRectangle(cornerRadius: Theme.radius))
                     .modifier(Autosave(text: notes, original: issue.description) { model.edit(issue.id, ["description": .text($0)]) })
             }
         }
@@ -226,7 +226,7 @@ private struct DetailBody: View {
             ForEach(kids) { k in
                 HStack(spacing: 8) {
                     Button { model.setStatus(k, k.status == .done ? .todo : .done) } label: { StatusGlyph(status: k.status) }.buttonStyle(.plain)
-                    Text(k.identifier).font(.caption.monospacedDigit()).foregroundStyle(Theme.faint)
+                    Text(k.identifier).font(Theme.mono()).foregroundStyle(Theme.faint)
                     Text(k.title).lineLimit(1).foregroundStyle(k.status.isClosed ? Theme.dim : Theme.text)
                     Spacer()
                 }

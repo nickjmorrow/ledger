@@ -20,7 +20,7 @@ public struct PhoneRootView: View {
             }
             Button { model.compose(status: .inbox) } label: {
                 Image(systemName: "plus").font(.title2.weight(.semibold)).foregroundStyle(Theme.bar)
-                    .frame(width: 56, height: 56).background(Theme.sun, in: Circle())
+                    .frame(width: 56, height: 56).background(Theme.accent, in: Circle())
                     .shadow(color: .black.opacity(0.4), radius: 6, y: 3)
             }
             .padding(.trailing, 18).padding(.bottom, 66)
@@ -31,7 +31,7 @@ public struct PhoneRootView: View {
         .alert("Something went wrong", isPresented: Binding { model.error != nil } set: { if !$0 { model.error = nil } }) {
             Button("OK") { model.error = nil }
         } message: { Text(model.error ?? "") }
-        .preferredColorScheme(.dark).tint(Theme.sun)
+        .preferredColorScheme(.dark).tint(Theme.accent)
         .onAppear { model.start() }
         .onChange(of: phase) { _, p in if p == .active { model.start() } else { model.stop() } }
         .environment(\.openSettings, { settings = true })
