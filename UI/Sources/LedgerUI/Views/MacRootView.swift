@@ -102,29 +102,17 @@ public struct LedgerCommands: Commands {
 
 private struct Sidebar: View {
     @Environment(LedgerModel.self) private var model
-    @State private var newLabel = false
-    @State private var labelName = ""
 
     var body: some View {
         List(selection: Binding<Scope?>(get: { model.scope }, set: { if let s = $0 { model.go(s) } })) {
             row("Inbox", "tray", .inbox, count: model.count(.inbox))
-            row("Today", "sun.max", .today, count: model.count(.today))
-            row("Current cycle", "arrow.triangle.2.circlepath", .cycle(nil))
-            row("All issues", "list.bullet", .all)
-            row("Projects", "folder", .projects)
+            row("Current Cycle", "arrow.triangle.2.circlepath", .cycle(nil))
+            row("All Issues", "list.bullet", .all)
             Section("Views") {
                 ForEach(model.views) { v in
                     Label(v.name, systemImage: "line.3.horizontal.decrease.circle").tag(Scope.view(v.id))
                         .contextMenu { Button("Delete view", role: .destructive) { model.deleteView(v.id) } }
                 }
-            }
-            Section {
-                ForEach(model.labels) { l in
-                    HStack(spacing: 8) { Circle().fill(Color(hexString: l.color)).frame(width: 8, height: 8); Text(l.name) }.tag(Scope.label(l.id))
-                        .contextMenu { Button("Delete label", role: .destructive) { model.deleteLabel(l.id) } }
-                }
-            } header: {
-                HStack { Text("Labels"); Spacer(); Button { labelName = ""; newLabel = true } label: { Image(systemName: "plus") }.buttonStyle(.plain) }
             }
         }
         .listStyle(.sidebar).scrollContentBackground(.hidden).background(Theme.bar)
@@ -135,11 +123,6 @@ private struct Sidebar: View {
                 Spacer()
             }
             .padding(.horizontal, 12).padding(.vertical, 8).background(Theme.bar).help(model.syncLabel)
-        }
-        .alert("New label", isPresented: $newLabel) {
-            TextField("Name", text: $labelName)
-            Button("Create") { model.createLabel(labelName) }
-            Button("Cancel", role: .cancel) {}
         }
     }
 
@@ -172,12 +155,12 @@ private struct Content: View {
                         .onChange(of: searchField) { _, f in model.searchFocused = f }
                 }
                 .padding(.horizontal, 8).padding(.vertical, 4).background(Theme.field, in: RoundedRectangle(cornerRadius: 6))
-                if model.scope != .projects {
+                if model.scope != .projects, !model.isPlainList {
                     Picker("Layout", selection: $model.layout) {
                         Image(systemName: "list.bullet").tag(Layout.list); Image(systemName: "rectangle.split.3x1").tag(Layout.board)
                     }.pickerStyle(.segmented).labelsHidden().frame(width: 80)
                 }
-                if model.layout == .board, model.scope != .projects {
+                if model.layout == .board, model.scope != .projects, !model.isPlainList {
                     Button { showDisplay.toggle() } label: { Image(systemName: "slider.horizontal.3") }.help("Display options")
                         .popover(isPresented: $showDisplay, arrowEdge: .bottom) { DisplayOptions() }
                 }
@@ -193,7 +176,7 @@ private struct Content: View {
                 if case .cycle = model.scope, !model.searching { CycleHeader(cycle: model.cycle({ if case let .cycle(id) = model.scope { return id ?? model.currentCycleID } else { return nil } }())) }
                 FilterBar()
                 Divider().overlay(Theme.line)
-                if model.layout == .board { BoardView() } else { IssueList() }
+                if model.layout == .board, !model.isPlainList { BoardView() } else { IssueList() }
             }
         }
         .background(Theme.background)
@@ -210,8 +193,8 @@ private struct IssueList: View {
             ScrollView {
                 LazyVStack(spacing: 0, pinnedViews: []) {
                     ForEach(groups) { g in
-                        GroupHeader(group: g)
-                        if !model.collapsed.contains(g.status) {
+                        if !model.isPlainList { GroupHeader(group: g) }
+                        if model.isPlainList || !model.collapsed.contains(g.status) {
                             ForEach(g.issues) { i in
                                 IssueRow(issue: i, selected: model.selectedID == i.id).id(i.id)
                                     .onTapGesture { model.select(i.id, open: true) }
@@ -252,7 +235,7 @@ private struct BoardView: View {
         ScrollView(.horizontal) {
             HStack(alignment: .top, spacing: 10) {
                 ForEach(columns, id: \.self) { s in
-                    column(IssueGrouping.Group(status: s, issues: IssueGrouping.sorted(byStatus[s] ?? [], closed: s.isClosed)), columns)
+                    BoardColumn(group: IssueGrouping.Group(status: s, issues: IssueGrouping.sorted(byStatus[s] ?? [], closed: s.isClosed)), columns: columns)
                 }
                 if !model.hiddenColumns.isEmpty { HiddenColumns(counts: byStatus.mapValues(\.count)) }
             }
@@ -260,37 +243,50 @@ private struct BoardView: View {
         }
     }
 
-    private func column(_ g: IssueGrouping.Group, _ columns: [Status]) -> some View {
-        VStack(spacing: 6) {
-            HStack(spacing: 6) {
-                StatusGlyph(status: g.status); Text(g.status.title).font(.subheadline.weight(.semibold))
-                Text("\(g.issues.count)").foregroundStyle(Theme.faint)
-                Spacer()
-                Menu { ColumnMenu(status: g.status, columns: columns) } label: { Image(systemName: "ellipsis") }
-                    .menuStyle(.button).menuIndicator(.hidden).buttonStyle(.plain).fixedSize().foregroundStyle(Theme.dim).help("Column options")
-                Button { model.compose(status: g.status) } label: { Image(systemName: "plus") }.buttonStyle(.plain).foregroundStyle(Theme.dim)
-            }
-            .padding(.horizontal, 6)
-            .contentShape(Rectangle())
-            .draggable(Self.columnPrefix + g.status.rawValue) {
-                HStack(spacing: 6) { StatusGlyph(status: g.status); Text(g.status.title) }.padding(8).background(Theme.raised, in: RoundedRectangle(cornerRadius: 6))
-            }
-            .contextMenu { ColumnMenu(status: g.status, columns: columns) }
-            ScrollView {
-                LazyVStack(spacing: 6) {
-                    ForEach(g.issues.prefix(g.status.isClosed ? 30 : 500)) { i in Card(issue: i) }
-                    if g.status.isClosed, g.issues.count > 30 { Text("+\(g.issues.count - 30) more").font(.caption).foregroundStyle(Theme.faint) }
+    /// One status column; lights up while a card or column is dragged over it.
+    private struct BoardColumn: View {
+        @Environment(LedgerModel.self) private var model
+        let group: IssueGrouping.Group
+        let columns: [Status]
+        @State private var targeted = false
+
+        var body: some View {
+            let g = group
+            VStack(spacing: 6) {
+                HStack(spacing: 6) {
+                    StatusGlyph(status: g.status); Text(g.status.title).font(.subheadline.weight(.semibold))
+                    Text("\(g.issues.count)").foregroundStyle(Theme.faint)
+                    Spacer()
+                    Menu { ColumnMenu(status: g.status, columns: columns) } label: { Image(systemName: "ellipsis") }
+                        .menuStyle(.button).menuIndicator(.hidden).buttonStyle(.plain).fixedSize().foregroundStyle(Theme.dim).help("Column options")
+                    Button { model.compose(status: g.status) } label: { Image(systemName: "plus") }.buttonStyle(.plain).foregroundStyle(Theme.dim)
+                }
+                .padding(.horizontal, 6)
+                .contentShape(Rectangle())
+                .draggable(BoardView.columnPrefix + g.status.rawValue) {
+                    HStack(spacing: 6) { StatusGlyph(status: g.status); Text(g.status.title) }.padding(8).background(Theme.raised, in: RoundedRectangle(cornerRadius: 6))
+                }
+                .contextMenu { ColumnMenu(status: g.status, columns: columns) }
+                ScrollView {
+                    LazyVStack(spacing: 6) {
+                        ForEach(g.issues.prefix(g.status.isClosed ? 30 : 500)) { i in Card(issue: i) }
+                        if g.status.isClosed, g.issues.count > 30 { Text("+\(g.issues.count - 30) more").font(.caption).foregroundStyle(Theme.faint) }
+                    }
                 }
             }
-        }
-        .frame(width: 270).padding(8)
-        .background(Theme.bar, in: RoundedRectangle(cornerRadius: 8))
-        .dropDestination(for: String.self) { ids, _ in
-            for id in ids {
-                if let s = Self.column(from: id) { model.moveColumn(s, to: g.status) }
-                else if let i = model.issue(id), i.status != g.status { model.setStatus(i, g.status) }
-            }
-            return !ids.isEmpty
+            .frame(width: 270).padding(8)
+            .background(targeted ? Theme.raised.opacity(0.55) : Theme.bar, in: RoundedRectangle(cornerRadius: 8))
+            .overlay(RoundedRectangle(cornerRadius: 8).strokeBorder(Theme.sun.opacity(targeted ? 0.7 : 0), lineWidth: 1.5))
+            .animation(.easeOut(duration: 0.15), value: targeted)
+            .dropDestination(for: String.self) { ids, _ in
+                withAnimation(.snappy(duration: 0.25)) {
+                    for id in ids {
+                        if let s = BoardView.column(from: id) { model.moveColumn(s, to: g.status) }
+                        else if let i = model.issue(id), i.status != g.status { model.setStatus(i, g.status) }
+                    }
+                }
+                return !ids.isEmpty
+            } isTargeted: { targeted = $0 }
         }
     }
 
@@ -350,7 +346,7 @@ private struct BoardView: View {
             .background(selected ? Theme.raised : Theme.card, in: RoundedRectangle(cornerRadius: 6))
             .overlay(RoundedRectangle(cornerRadius: 6).stroke(selected ? Theme.sun : Theme.line, lineWidth: selected ? 1.5 : 0.5))
             .onTapGesture { model.select(issue.id, open: true) }
-            .draggable(issue.id)
+            .draggable(issue.id) { DragPreview(issue: issue) }
             .contextMenu { IssueMenu(issue: issue) }
         }
     }
@@ -403,6 +399,27 @@ private struct DisplayOptions: View {
             }
         }
         .padding(12).frame(width: 240)
+    }
+}
+
+/// What follows the pointer while a card is dragged: the card, lifted and tilted slightly, in the accent outline.
+private struct DragPreview: View {
+    let issue: Issue
+    var body: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            HStack(spacing: 6) {
+                StatusGlyph(status: issue.status)
+                Text(issue.identifier).font(.caption.monospacedDigit()).foregroundStyle(Theme.faint)
+                Spacer()
+                PriorityGlyph(priority: issue.priority)
+            }
+            Text(issue.title).font(.callout).foregroundStyle(Theme.text).lineLimit(2).frame(maxWidth: .infinity, alignment: .leading)
+        }
+        .padding(10).frame(width: 250)
+        .background(Theme.raised, in: RoundedRectangle(cornerRadius: 6))
+        .overlay(RoundedRectangle(cornerRadius: 6).stroke(Theme.sun, lineWidth: 1.5))
+        .rotationEffect(.degrees(-2))
+        .padding(12)
     }
 }
 

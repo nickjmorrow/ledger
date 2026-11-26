@@ -88,6 +88,10 @@ struct FilterBar: View {
             chip("Label", active: !model.filter.labels.isEmpty) {
                 if model.labels.isEmpty { Text("No labels yet") }
                 ForEach(model.labels) { l in Toggle(l.name, isOn: toggle(\.labels, l.id)) }
+                #if os(macOS)
+                Divider()
+                SettingsLink { Text("Manage Labels…") }
+                #endif
             }
             chip("Project", active: model.filter.project != nil) {
                 Button("Any project") { model.filter.project = nil }

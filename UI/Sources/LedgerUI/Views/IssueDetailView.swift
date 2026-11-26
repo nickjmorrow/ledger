@@ -125,6 +125,10 @@ private struct DetailBody: View {
             ForEach(model.labels) { l in
                 Toggle(l.name, isOn: Binding { issue.labels.contains(l.id) } set: { _ in model.toggleLabel(issue, l.id) })
             }
+            #if os(macOS)
+            Divider()
+            SettingsLink { Text("Manage Labels…") }
+            #endif
         } label: {
             if mine.isEmpty { Text("None").foregroundStyle(Theme.faint) }
             else { HStack(spacing: 4) { ForEach(mine) { LabelChip(label: $0) } } }

@@ -204,6 +204,28 @@ struct FailingTransport: SyncTransport {
         #expect(m.issue(i.id)?.cycleId == m.currentCycleID)
     }
 
+    @Test func opensOnTheCurrentCycleAndInboxIsAPlainList() throws {
+        let m = try model()
+        #expect(m.scope == .cycle(nil))
+        #expect(!m.isPlainList)
+        m.go(.inbox)
+        #expect(m.isPlainList)
+        m.searchText = "x"
+        #expect(!m.isPlainList)
+    }
+
+    @Test func renamesAndRecoloursLabels() throws {
+        let m = try model()
+        m.createLabel("Home")
+        m.load(try LedgerModel.snapshot(m.ledger.db))
+        let id = try #require(m.labels.first?.id)
+        m.updateLabel(id, name: "  House ", color: "#7ee0a1")
+        m.updateLabel(id, name: "   ")
+        m.load(try LedgerModel.snapshot(m.ledger.db))
+        #expect(m.label(id)?.name == "House")
+        #expect(m.label(id)?.color == "#7ee0a1")
+    }
+
     @Test func opensWithCyclesRolled() throws {
         let m = try model()
         #expect(m.currentCycle != nil)

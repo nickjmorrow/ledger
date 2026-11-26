@@ -222,6 +222,7 @@ public struct SettingsView: View {
                     if model.syncConfigured && model.settings != nil { Button("Reset to defaults") { model.clearSettings(); load() } }
                 }
             }
+            LabelsSection()
             Section("Status") {
                 LabeledContent("Last sync", value: model.lastSync.map { Format.ago($0) } ?? "never")
                 if let e = model.syncError { Text(e).foregroundStyle(Theme.red) }
@@ -238,5 +239,45 @@ public struct SettingsView: View {
 
     private func load() {
         url = model.settings?.url ?? ""; token = model.settings?.token ?? ""; host = model.settings?.hostHeader ?? ""
+    }
+}
+
+/// Labels live here rather than in the sidebar: rename, recolour, delete and add.
+private struct LabelsSection: View {
+    @Environment(LedgerModel.self) private var model
+    @State private var newName = ""
+
+    var body: some View {
+        Section("Labels") {
+            ForEach(model.labels) { l in LabelRow(label: l) }
+            HStack {
+                TextField("New label", text: $newName).onSubmit(add)
+                Button("Add", action: add).disabled(newName.trimmingCharacters(in: .whitespaces).isEmpty)
+            }
+        }
+    }
+
+    private func add() { model.createLabel(newName); newName = "" }
+}
+
+private struct LabelRow: View {
+    @Environment(LedgerModel.self) private var model
+    let label: LedgerCore.Label
+    @State private var name: String
+
+    init(label: LedgerCore.Label) { self.label = label; _name = State(initialValue: label.name) }
+
+    var body: some View {
+        HStack(spacing: 8) {
+            Menu {
+                ForEach(Theme.swatches, id: \.self) { hex in
+                    Button { model.updateLabel(label.id, color: hex) } label: { Text(hex == label.color ? "✓ \(hex)" : hex) }
+                }
+            } label: { Circle().fill(Color(hexString: label.color)).frame(width: 12, height: 12) }
+                .menuStyle(.button).buttonStyle(.plain).menuIndicator(.hidden).fixedSize().help("Colour")
+            TextField("Name", text: $name).onSubmit { model.updateLabel(label.id, name: name) }
+            Button(role: .destructive) { model.deleteLabel(label.id) } label: { Image(systemName: "trash") }.buttonStyle(.borderless).help("Delete label")
+        }
+        .onChange(of: label.name) { _, n in name = n }
     }
 }

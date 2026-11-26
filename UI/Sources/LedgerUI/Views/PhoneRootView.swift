@@ -5,7 +5,7 @@ import SwiftUI
 public struct PhoneRootView: View {
     @Environment(LedgerModel.self) private var model
     @Environment(\.scenePhase) private var phase
-    @State private var tab = 0
+    @State private var tab = 1
     @State private var settings = false
 
     public init() {}
@@ -14,21 +14,17 @@ public struct PhoneRootView: View {
         @Bindable var model = model
         ZStack(alignment: .bottomTrailing) {
             TabView(selection: $tab) {
-                page(.today).tabItem { SwiftUI.Label("Today", systemImage: "sun.max") }.tag(0)
-                page(.inbox).tabItem { SwiftUI.Label("Inbox", systemImage: "tray") }.tag(1)
-                page(.cycle(nil)).tabItem { SwiftUI.Label("Cycle", systemImage: "arrow.triangle.2.circlepath") }.tag(2)
-                page(.all).tabItem { SwiftUI.Label("All", systemImage: "list.bullet") }.tag(3)
-                page(.projects).tabItem { SwiftUI.Label("Projects", systemImage: "folder") }.tag(4)
+                page(.inbox).tabItem { SwiftUI.Label("Inbox", systemImage: "tray") }.tag(0)
+                page(.cycle(nil)).tabItem { SwiftUI.Label("Current Cycle", systemImage: "arrow.triangle.2.circlepath") }.tag(1)
+                page(.all).tabItem { SwiftUI.Label("All Issues", systemImage: "list.bullet") }.tag(2)
             }
-            if tab != 4 {
-                Button { model.compose(status: tab == 0 ? .today : .inbox) } label: {
-                    Image(systemName: "plus").font(.title2.weight(.semibold)).foregroundStyle(Theme.bar)
-                        .frame(width: 56, height: 56).background(Theme.sun, in: Circle())
-                        .shadow(color: .black.opacity(0.4), radius: 6, y: 3)
-                }
-                .padding(.trailing, 18).padding(.bottom, 66)
-                .accessibilityLabel("New issue")
+            Button { model.compose(status: .inbox) } label: {
+                Image(systemName: "plus").font(.title2.weight(.semibold)).foregroundStyle(Theme.bar)
+                    .frame(width: 56, height: 56).background(Theme.sun, in: Circle())
+                    .shadow(color: .black.opacity(0.4), radius: 6, y: 3)
             }
+            .padding(.trailing, 18).padding(.bottom, 66)
+            .accessibilityLabel("New issue")
         }
         .sheet(isPresented: $model.composing) { QuickAddSheet(status: model.composeStatus).presentationDetents([.height(220), .medium]) }
         .sheet(isPresented: $settings) { NavigationStack { SettingsView().navigationTitle("Settings").navigationBarTitleDisplayMode(.inline) }.presentationDetents([.large]) }
@@ -39,7 +35,7 @@ public struct PhoneRootView: View {
         .onAppear { model.start() }
         .onChange(of: phase) { _, p in if p == .active { model.start() } else { model.stop() } }
         .environment(\.openSettings, { settings = true })
-        .onChange(of: tab) { _, t in model.go([Scope.today, .inbox, .cycle(nil), .all, .projects][t]) }
+        .onChange(of: tab) { _, t in model.go([Scope.inbox, .cycle(nil), .all][t]) }
     }
 
     private func page(_ s: Scope) -> some View {
@@ -78,7 +74,7 @@ private struct PhonePage: View {
         case .cycle: return model.currentCycle.map { "Cycle \($0.number)" } ?? "Cycle"
         case .inbox: return "Inbox"
         case .today: return "Today"
-        case .all: return "All issues"
+        case .all: return "All Issues"
         default: return "Projects"
         }
     }
@@ -102,7 +98,7 @@ private struct PhoneList: View {
             if case .cycle = scope { CycleHeader(cycle: model.currentCycle).listRowBackground(Theme.background).listRowSeparator(.hidden) }
             ForEach(groups) { g in
                 Section {
-                    if !model.collapsed.contains(g.status) {
+                    if scope == .inbox || !model.collapsed.contains(g.status) {
                         ForEach(g.issues) { i in
                             NavigationLink(value: i.id) { IssueRow(issue: i, compact: true) }
                                 .listRowBackground(Theme.background).listRowSeparatorTint(Theme.line)
@@ -116,7 +112,7 @@ private struct PhoneList: View {
                         }
                     }
                 } header: {
-                    GroupHeader(group: g).listRowInsets(EdgeInsets())
+                    if scope != .inbox { GroupHeader(group: g).listRowInsets(EdgeInsets()) }
                 }
             }
             if groups.isEmpty { EmptyState(text: search.isEmpty ? "Nothing here" : "No matches").listRowBackground(Theme.background) }

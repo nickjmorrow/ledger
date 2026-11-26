@@ -26,7 +26,7 @@ public final class LedgerModel {
     @ObservationIgnored private var childrenOf: [String: [Issue]] = [:]
 
     // What's on screen.
-    public var scope: Scope = .today
+    public var scope: Scope = .cycle(nil)
     public var layout: Layout = .list { didSet { defaults.set(layout.rawValue, forKey: "layout") } }
     public var filter = ViewFilter()
     public var selectedID: String?
@@ -148,6 +148,8 @@ public final class LedgerModel {
     }
 
     public var groups: [IssueGrouping.Group] { IssueGrouping.group(visible) }
+    /// The Inbox is one status, so it's a plain list: no board, no group headers.
+    public var isPlainList: Bool { scope == .inbox && !searching }
     /// Issue ids in the order J and K walk them: expanded groups only.
     public var navigationOrder: [String] { groups.filter { !collapsed.contains($0.status) }.flatMap { $0.issues.map(\.id) } }
 
@@ -157,7 +159,7 @@ public final class LedgerModel {
         case .inbox: return "Inbox"
         case .today: return "Today"
         case let .cycle(id): return cycle(id ?? currentCycleID).map { "Cycle \($0.number)" } ?? "Cycle"
-        case .all: return "All issues"
+        case .all: return "All Issues"
         case .projects: return "Projects"
         case let .project(id): return project(id)?.name ?? "Project"
         case let .label(id): return label(id)?.name ?? "Label"
@@ -306,6 +308,13 @@ public final class LedgerModel {
         let n = name.trimmingCharacters(in: .whitespaces)
         guard !n.isEmpty else { return }
         _ = try? ledger.putLabel(name: n, color: Theme.swatches[labels.count % Theme.swatches.count]); localEdit()
+    }
+
+    public func updateLabel(_ id: String, name: String? = nil, color: String? = nil) {
+        guard let l = label(id) else { return }
+        let n = (name ?? l.name).trimmingCharacters(in: .whitespaces)
+        guard !n.isEmpty else { return }
+        do { _ = try ledger.putLabel(id: id, name: n, color: color); localEdit() } catch { self.error = "\(error)" }
     }
 
     public func deleteLabel(_ id: String) { try? ledger.delete(.labels, id: id); if scope == .label(id) { go(.all) }; localEdit() }

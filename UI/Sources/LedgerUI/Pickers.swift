@@ -107,10 +107,8 @@ extension LedgerModel {
         }
         add("new", .action, "Create issue", "C", "plus") { self.compose() }
         add("go-inbox", .action, "Go to Inbox", "", "tray") { self.go(.inbox) }
-        add("go-today", .action, "Go to Today", "", "sun.max") { self.go(.today) }
-        add("go-cycle", .action, "Go to Current cycle", "", "arrow.triangle.2.circlepath") { self.go(.cycle(nil)) }
-        add("go-all", .action, "Go to All issues", "", "list.bullet") { self.go(.all) }
-        add("go-projects", .action, "Go to Projects", "", "folder") { self.go(.projects) }
+        add("go-cycle", .action, "Go to Current Cycle", "", "arrow.triangle.2.circlepath") { self.go(.cycle(nil)) }
+        add("go-all", .action, "Go to All Issues", "", "list.bullet") { self.go(.all) }
         add("layout", .action, layout == .list ? "Show as board" : "Show as list", "", layout == .list ? "rectangle.split.3x1" : "list.bullet") { self.layout = self.layout == .list ? .board : .list }
         add("sync", .action, "Sync now", "", "arrow.clockwise") { Task { await self.syncNow() } }
         if let i = selected {
