@@ -334,3 +334,45 @@ struct FailingTransport: SyncTransport {
         #expect(m.issue(i.id)?.status == .today)
     }
 }
+
+@Suite struct BoardColumnTests {
+    @Test func cycleStartsWithWorkingColumnsOthersWithAll() {
+        #expect(BoardColumns.defaults(for: "cycle") == [.todo, .today, .done])
+        #expect(BoardColumns.defaults(for: "all") == IssueGrouping.order)
+        #expect(BoardColumns.hidden([.todo, .today, .done]) == [.inbox, .canceled, .duplicate])
+    }
+
+    @Test func droppingAColumnTakesTheTargetsPlace() {
+        let c: [Status] = [.todo, .today, .done]
+        #expect(BoardColumns.moving(.todo, to: .done, in: c) == [.today, .done, .todo])
+        #expect(BoardColumns.moving(.done, to: .todo, in: c) == [.done, .todo, .today])
+        #expect(BoardColumns.moving(.inbox, to: .today, in: c) == [.todo, .inbox, .today, .done])
+        #expect(BoardColumns.moving(.inbox, to: nil, in: c) == [.todo, .today, .done, .inbox])
+        #expect(BoardColumns.moving(.today, to: .today, in: c) == c)
+    }
+
+    @Test func shiftingStopsAtTheEdges() {
+        let c: [Status] = [.todo, .today, .done]
+        #expect(BoardColumns.shifting(.today, by: -1, in: c) == [.today, .todo, .done])
+        #expect(BoardColumns.shifting(.todo, by: -1, in: c) == c)
+        #expect(BoardColumns.shifting(.done, by: 1, in: c) == c)
+    }
+}
+
+@MainActor @Suite struct BoardColumnModelTests {
+    @Test func columnsAreKeptPerScreenAndReset() throws {
+        let d = UserDefaults(suiteName: UUID().uuidString)!
+        let m = LedgerModel(ledger: try makeLedger(), defaults: d, syncDelay: .seconds(60))
+        m.go(.cycle(nil))
+        #expect(m.boardColumns == [.todo, .today, .done])
+        m.hideColumn(.done); m.showColumn(.inbox); m.shiftColumn(.inbox, by: -1)
+        #expect(m.boardColumns == [.todo, .inbox, .today])
+        m.go(.all)
+        #expect(m.boardColumns == IssueGrouping.order)
+        let again = LedgerModel(ledger: try makeLedger(), defaults: d, syncDelay: .seconds(60))
+        again.go(.cycle("other"))
+        #expect(again.boardColumns == [.todo, .inbox, .today])
+        again.resetColumns()
+        #expect(again.boardColumns == [.todo, .today, .done])
+    }
+}

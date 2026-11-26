@@ -35,6 +35,8 @@ public final class LedgerModel {
     public var searchFocus = 0
     public var searchFocused = false
     public var collapsed: Set<Status> = IssueGrouping.collapsedByDefault
+    /// Bumped when board columns change, so views reading them (from UserDefaults) redraw.
+    var columnsVersion = 0
     public var palette = false
     public var picker: PickerKind?
     public var pickerIndex = 0
@@ -201,6 +203,47 @@ public final class LedgerModel {
     }
 
     public func toggleCollapsed(_ s: Status) { if collapsed.contains(s) { collapsed.remove(s) } else { collapsed.insert(s) } }
+
+    // MARK: board columns (kept per screen on this device)
+
+    /// Every cycle shares one layout, as do all projects and all labels; each saved view has its own.
+    var columnsKey: String {
+        switch scope {
+        case .inbox: return "inbox"
+        case .today: return "today"
+        case .cycle: return "cycle"
+        case .all, .projects: return "all"
+        case .project: return "project"
+        case .label: return "label"
+        case let .view(id): return "view:\(id)"
+        }
+    }
+
+    public var boardColumns: [Status] {
+        _ = columnsVersion
+        let saved = (defaults.dictionary(forKey: "boardColumns") as? [String: [String]])?[columnsKey]
+        return saved.map { $0.compactMap(Status.init(rawValue:)) } ?? BoardColumns.defaults(for: columnsKey)
+    }
+    public var hiddenColumns: [Status] { BoardColumns.hidden(boardColumns) }
+
+    func setColumns(_ c: [Status]) {
+        var all = defaults.dictionary(forKey: "boardColumns") as? [String: [String]] ?? [:]
+        all[columnsKey] = c.map(\.rawValue)
+        defaults.set(all, forKey: "boardColumns")
+        columnsVersion += 1
+    }
+
+    public func hideColumn(_ s: Status) { setColumns(boardColumns.filter { $0 != s }) }
+    public func showColumn(_ s: Status) { if !boardColumns.contains(s) { setColumns(boardColumns + [s]) } }
+    public func toggleColumn(_ s: Status) { if boardColumns.contains(s) { hideColumn(s) } else { showColumn(s) } }
+    public func moveColumn(_ s: Status, to target: Status?) { setColumns(BoardColumns.moving(s, to: target, in: boardColumns)) }
+    public func shiftColumn(_ s: Status, by: Int) { setColumns(BoardColumns.shifting(s, by: by, in: boardColumns)) }
+    public func resetColumns() {
+        var all = defaults.dictionary(forKey: "boardColumns") as? [String: [String]] ?? [:]
+        all[columnsKey] = nil
+        defaults.set(all, forKey: "boardColumns")
+        columnsVersion += 1
+    }
 
     // MARK: edits (each one is written, then synced shortly after)
 

@@ -36,3 +36,31 @@ public enum IssueGrouping {
 
     static func rank(_ p: Int) -> Int { p == 0 ? 5 : p }
 }
+
+/// Which status columns a board shows, and in what order. Each screen keeps its own; hidden statuses can be shown again.
+public enum BoardColumns {
+    /// A cycle is planned work, so its board starts with just the working columns.
+    public static func defaults(for key: String) -> [Status] {
+        key == "cycle" ? [.todo, .today, .done] : IssueGrouping.order
+    }
+
+    public static func hidden(_ shown: [Status]) -> [Status] { IssueGrouping.order.filter { !shown.contains($0) } }
+
+    /// `s` dropped on `target`'s place: after it when coming from its left, else before it (shown if it was hidden). Nil target: the end.
+    public static func moving(_ s: Status, to target: Status?, in shown: [Status]) -> [Status] {
+        guard s != target else { return shown }
+        var c = shown.filter { $0 != s }
+        guard let target, let to = c.firstIndex(of: target) else { c.append(s); return c }
+        let fromLeft = (shown.firstIndex(of: s) ?? .max) < (shown.firstIndex(of: target) ?? 0)
+        c.insert(s, at: fromLeft ? to + 1 : to)
+        return c
+    }
+
+    /// `s` swapped with its neighbour `by` places away (-1 left, 1 right); unchanged at an edge.
+    public static func shifting(_ s: Status, by: Int, in shown: [Status]) -> [Status] {
+        guard let i = shown.firstIndex(of: s), shown.indices.contains(i + by) else { return shown }
+        var c = shown
+        c.swapAt(i, i + by)
+        return c
+    }
+}

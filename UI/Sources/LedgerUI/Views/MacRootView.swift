@@ -157,6 +157,7 @@ private struct Sidebar: View {
 private struct Content: View {
     @Environment(LedgerModel.self) private var model
     @FocusState private var searchField: Bool
+    @State private var showDisplay = false
 
     var body: some View {
         @Bindable var model = model
@@ -175,6 +176,10 @@ private struct Content: View {
                     Picker("Layout", selection: $model.layout) {
                         Image(systemName: "list.bullet").tag(Layout.list); Image(systemName: "rectangle.split.3x1").tag(Layout.board)
                     }.pickerStyle(.segmented).labelsHidden().frame(width: 80)
+                }
+                if model.layout == .board, model.scope != .projects {
+                    Button { showDisplay.toggle() } label: { Image(systemName: "slider.horizontal.3") }.help("Display options")
+                        .popover(isPresented: $showDisplay, arrowEdge: .bottom) { DisplayOptions() }
                 }
                 Button { model.compose() } label: { Image(systemName: "plus") }.help("New issue (C)")
                 Button { model.detailOpen.toggle() } label: { Image(systemName: "sidebar.right") }.help("Detail (Return)")
@@ -239,36 +244,87 @@ struct IssueMenu: View {
 
 private struct BoardView: View {
     @Environment(LedgerModel.self) private var model
+    static let columnPrefix = "column:"
 
     var body: some View {
-        let groups = IssueGrouping.group(model.visible, keepEmpty: true)
+        let byStatus = Dictionary(grouping: model.visible, by: \.status)
+        let columns = model.boardColumns
         ScrollView(.horizontal) {
             HStack(alignment: .top, spacing: 10) {
-                ForEach(groups) { g in
-                    VStack(spacing: 6) {
-                        HStack(spacing: 6) {
-                            StatusGlyph(status: g.status); Text(g.status.title).font(.subheadline.weight(.semibold))
-                            Text("\(g.issues.count)").foregroundStyle(Theme.faint)
-                            Spacer()
-                            Button { model.compose(status: g.status) } label: { Image(systemName: "plus") }.buttonStyle(.plain).foregroundStyle(Theme.dim)
-                        }
-                        .padding(.horizontal, 6)
-                        ScrollView {
-                            LazyVStack(spacing: 6) {
-                                ForEach(g.issues.prefix(g.status.isClosed ? 30 : 500)) { i in Card(issue: i) }
-                                if g.status.isClosed, g.issues.count > 30 { Text("+\(g.issues.count - 30) more").font(.caption).foregroundStyle(Theme.faint) }
-                            }
-                        }
-                    }
-                    .frame(width: 270).padding(8)
-                    .background(Theme.bar, in: RoundedRectangle(cornerRadius: 8))
-                    .dropDestination(for: String.self) { ids, _ in
-                        for id in ids { if let i = model.issue(id), i.status != g.status { model.setStatus(i, g.status) } }
-                        return !ids.isEmpty
-                    }
+                ForEach(columns, id: \.self) { s in
+                    column(IssueGrouping.Group(status: s, issues: IssueGrouping.sorted(byStatus[s] ?? [], closed: s.isClosed)), columns)
                 }
+                if !model.hiddenColumns.isEmpty { HiddenColumns(counts: byStatus.mapValues(\.count)) }
             }
             .padding(12)
+        }
+    }
+
+    private func column(_ g: IssueGrouping.Group, _ columns: [Status]) -> some View {
+        VStack(spacing: 6) {
+            HStack(spacing: 6) {
+                StatusGlyph(status: g.status); Text(g.status.title).font(.subheadline.weight(.semibold))
+                Text("\(g.issues.count)").foregroundStyle(Theme.faint)
+                Spacer()
+                Menu { ColumnMenu(status: g.status, columns: columns) } label: { Image(systemName: "ellipsis") }
+                    .menuStyle(.button).menuIndicator(.hidden).buttonStyle(.plain).fixedSize().foregroundStyle(Theme.dim).help("Column options")
+                Button { model.compose(status: g.status) } label: { Image(systemName: "plus") }.buttonStyle(.plain).foregroundStyle(Theme.dim)
+            }
+            .padding(.horizontal, 6)
+            .contentShape(Rectangle())
+            .draggable(Self.columnPrefix + g.status.rawValue) {
+                HStack(spacing: 6) { StatusGlyph(status: g.status); Text(g.status.title) }.padding(8).background(Theme.raised, in: RoundedRectangle(cornerRadius: 6))
+            }
+            .contextMenu { ColumnMenu(status: g.status, columns: columns) }
+            ScrollView {
+                LazyVStack(spacing: 6) {
+                    ForEach(g.issues.prefix(g.status.isClosed ? 30 : 500)) { i in Card(issue: i) }
+                    if g.status.isClosed, g.issues.count > 30 { Text("+\(g.issues.count - 30) more").font(.caption).foregroundStyle(Theme.faint) }
+                }
+            }
+        }
+        .frame(width: 270).padding(8)
+        .background(Theme.bar, in: RoundedRectangle(cornerRadius: 8))
+        .dropDestination(for: String.self) { ids, _ in
+            for id in ids {
+                if let s = Self.column(from: id) { model.moveColumn(s, to: g.status) }
+                else if let i = model.issue(id), i.status != g.status { model.setStatus(i, g.status) }
+            }
+            return !ids.isEmpty
+        }
+    }
+
+    static func column(from dragged: String) -> Status? {
+        dragged.hasPrefix(columnPrefix) ? Status(rawValue: String(dragged.dropFirst(columnPrefix.count))) : nil
+    }
+
+    /// Linear's "Hidden columns": what's off the board, with counts; click to put one back, or drop a column here to hide it.
+    private struct HiddenColumns: View {
+        @Environment(LedgerModel.self) private var model
+        let counts: [Status: Int]
+        var body: some View {
+            VStack(alignment: .leading, spacing: 4) {
+                Text("Hidden columns").font(.caption.weight(.semibold)).foregroundStyle(Theme.faint).padding(.horizontal, 6).padding(.bottom, 2)
+                ForEach(model.hiddenColumns, id: \.self) { s in
+                    HStack(spacing: 6) {
+                        StatusGlyph(status: s); Text(s.title).font(.callout)
+                        Spacer()
+                        Text("\(counts[s] ?? 0)").font(.caption).foregroundStyle(Theme.faint)
+                    }
+                    .padding(.horizontal, 6).frame(height: 26)
+                    .contentShape(Rectangle())
+                    .onTapGesture { model.showColumn(s) }
+                    .draggable(BoardView.columnPrefix + s.rawValue)
+                    .help("Show column")
+                }
+            }
+            .frame(width: 170).padding(8)
+            .background(Theme.bar.opacity(0.5), in: RoundedRectangle(cornerRadius: 8))
+            .dropDestination(for: String.self) { ids, _ in
+                let cols = ids.compactMap(BoardView.column(from:))
+                cols.forEach(model.hideColumn)
+                return !cols.isEmpty
+            }
         }
     }
 
@@ -297,6 +353,56 @@ private struct BoardView: View {
             .draggable(issue.id)
             .contextMenu { IssueMenu(issue: issue) }
         }
+    }
+}
+
+/// Move, hide and show columns: in each column's ⋯ menu and right-click menu.
+private struct ColumnMenu: View {
+    @Environment(LedgerModel.self) private var model
+    let status: Status
+    let columns: [Status]
+    var body: some View {
+        Button("Move left") { model.shiftColumn(status, by: -1) }.disabled(columns.first == status)
+        Button("Move right") { model.shiftColumn(status, by: 1) }.disabled(columns.last == status)
+        Button("Hide column") { model.hideColumn(status) }
+        if !model.hiddenColumns.isEmpty {
+            Divider()
+            Menu("Show column") { ForEach(model.hiddenColumns, id: \.self) { s in Button(s.title) { model.showColumn(s) } } }
+        }
+        Divider()
+        Button("Reset columns") { model.resetColumns() }
+    }
+}
+
+/// The toolbar's Display popover, as in Linear: every status with a checkbox, in board order; drag to reorder.
+private struct DisplayOptions: View {
+    @Environment(LedgerModel.self) private var model
+    var body: some View {
+        let shown = model.boardColumns
+        VStack(alignment: .leading, spacing: 8) {
+            Text("Board columns").font(.subheadline.weight(.semibold))
+            List {
+                ForEach(shown + model.hiddenColumns, id: \.self) { s in
+                    Toggle(isOn: Binding(get: { shown.contains(s) }, set: { _ in model.toggleColumn(s) })) {
+                        HStack(spacing: 6) { StatusGlyph(status: s); Text(s.title) }
+                    }
+                    .moveDisabled(!shown.contains(s))
+                }
+                .onMove { from, to in
+                    guard from.allSatisfy(shown.indices.contains) else { return }
+                    var c = shown
+                    c.move(fromOffsets: from, toOffset: min(to, shown.count))
+                    model.setColumns(c)
+                }
+            }
+            .listStyle(.plain).scrollContentBackground(.hidden).frame(height: 6 * 28)
+            HStack {
+                Text("Drag to reorder").font(.caption).foregroundStyle(Theme.faint)
+                Spacer()
+                Button("Reset") { model.resetColumns() }
+            }
+        }
+        .padding(12).frame(width: 240)
     }
 }
 
