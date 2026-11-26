@@ -9,7 +9,7 @@ A personal task tracker in the style of Linear: native apps for Mac and iPhone t
 - **Issues the Linear way**: six fixed statuses (Inbox, Todo, Today, Done, Canceled, Duplicate), priority, due dates, labels, projects, sub-issues, Markdown descriptions and `MOR-n` numbers.
 - **Automatic two-week cycles**: the current and next cycle always exist, and unfinished work in an ended cycle rolls into the current one.
 - **Recurring tasks**: completing a recurring issue creates the next occurrence with its due date advanced.
-- **Keyboard-first Mac app**: sidebar (Inbox, Today, Cycle, Projects, saved views, labels), list and board layouts, an inspector for details, a ⌘K command palette and Linear's single-key shortcuts (C create, S status, P priority, L label, D due, J/K move, / search). Full-text search uses SQLite FTS5.
+- **Keyboard-first Mac app**: sidebar (Inbox, Current Cycle, All Issues, saved views), list and board layouts with customizable columns, an inspector for details, a ⌘K command palette and Linear's single-key shortcuts (C create, S status, P priority, L label, D due, J/K move, / search). Full-text search uses SQLite FTS5.
 - **iPhone app**: tabs for Today, Inbox, Cycle, All and Projects, a detail sheet, and quick add that understands shorthand for due date, priority and labels.
 - **Offline-first sync** across devices, and a one-time importer from a JSON export of Linear issues and cycles.
 
