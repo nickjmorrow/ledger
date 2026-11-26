@@ -107,11 +107,12 @@ public final class LedgerModel {
 
     // MARK: lookups
 
-    public func issue(_ id: String?) -> Issue? { id.flatMap { byID[$0] } }
+    /// Reading `issues` first makes views that look one issue up redraw when it changes (the index itself isn't observed).
+    public func issue(_ id: String?) -> Issue? { _ = issues; return id.flatMap { byID[$0] } }
     public func label(_ id: String) -> Label? { labels.first { $0.id == id } }
     public func project(_ id: String?) -> Project? { id.flatMap { id in projects.first { $0.id == id } } }
     public func cycle(_ id: String?) -> Cycle? { id.flatMap { id in cycles.first { $0.id == id } } }
-    public func children(of id: String) -> [Issue] { IssueGrouping.sorted(childrenOf[id] ?? [], closed: false) }
+    public func children(of id: String) -> [Issue] { _ = issues; return IssueGrouping.sorted(childrenOf[id] ?? [], closed: false) }
     public var selected: Issue? { issue(selectedID) }
     public var currentCycle: Cycle? { cycle(currentCycleID) }
     public func projectCounts(_ id: String) -> (open: Int, total: Int) {

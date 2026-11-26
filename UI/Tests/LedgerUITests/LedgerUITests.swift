@@ -1,5 +1,6 @@
 import Foundation
 import LedgerCore
+import Observation
 import Testing
 @testable import LedgerUI
 
@@ -189,6 +190,18 @@ struct FailingTransport: SyncTransport {
 @MainActor @Suite struct ModelTests {
     func model(_ transport: SyncTransport? = nil, delay: Duration = .seconds(60)) throws -> LedgerModel {
         LedgerModel(ledger: try makeLedger(), transport: transport, defaults: UserDefaults(suiteName: UUID().uuidString)!, syncDelay: delay)
+    }
+
+    @Test func issueLookupRedrawsWhenTheIssueChanges() throws {
+        let m = try model()
+        let i = try #require(m.create(title: "Gift"))
+        m.load(try LedgerModel.snapshot(m.ledger.db))
+        var redrawn = false
+        withObservationTracking { _ = m.issue(i.id); _ = m.children(of: i.id) } onChange: { redrawn = true }
+        m.setCycle(i, m.currentCycleID)
+        m.load(try LedgerModel.snapshot(m.ledger.db))
+        #expect(redrawn)
+        #expect(m.issue(i.id)?.cycleId == m.currentCycleID)
     }
 
     @Test func opensWithCyclesRolled() throws {
