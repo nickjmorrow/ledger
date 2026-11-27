@@ -156,6 +156,63 @@ func label(_ id: String, _ name: String) -> Label { make(["id": id, "name": name
     @Test func onlyShorthandLeavesEmptyTitle() {
         #expect(QuickAdd.parse("p:high", labels: [], today: today).title == "")
     }
+
+    @Test func plainLanguageAtTheEnd() {
+        let q = QuickAdd.parse("Call the dentist tomorrow high priority #errands", labels: labels, today: today)
+        #expect(q.title == "Call the dentist")
+        #expect(q.due == "2026-11-04")
+        #expect(q.priority == 2)
+        #expect(q.labelIds == ["l1"])
+    }
+
+    @Test func plainDates() {
+        func due(_ s: String) -> String? { QuickAdd.parse("x \(s)", labels: [], today: today).due }
+        #expect(due("today") == "2026-11-03")
+        #expect(due("friday") == "2026-11-06")
+        #expect(due("this friday") == "2026-11-06")
+        #expect(due("next friday") == "2026-11-13")
+        #expect(due("next monday") == "2026-11-09")
+        #expect(due("next week") == "2026-11-09")
+        #expect(due("in 3 days") == "2026-11-06")
+        #expect(due("in a week") == "2026-11-10")
+        #expect(due("nov 30") == "2026-11-30")
+        #expect(due("November 30th") == "2026-11-30")
+        #expect(due("january 5") == "2027-01-05")
+        #expect(due("12/25") == "2026-12-25")
+        #expect(due("2026-12-25") == "2026-12-25")
+        #expect(due("feb 30") == nil)
+    }
+
+    @Test func markedDatesWorkMidSentence() {
+        let q = QuickAdd.parse("Submit report by Friday to the team", labels: [], today: today)
+        #expect(q.title == "Submit report to the team")
+        #expect(q.due == "2026-11-06")
+        #expect(QuickAdd.parse("Lunch on fri", labels: [], today: today).due == "2026-11-06")
+        #expect(QuickAdd.parse("File taxes due nov 30 low priority", labels: [], today: today) == QuickAdd(title: "File taxes", due: "2026-11-30", priority: 4))
+    }
+
+    @Test func repeats() {
+        func q(_ s: String) -> QuickAdd { QuickAdd.parse(s, labels: [], today: today) }
+        #expect(q("Pay rent every month") == QuickAdd(title: "Pay rent", recurrence: Recurrence(every: .month)))
+        #expect(q("Water plants every 2 weeks") == QuickAdd(title: "Water plants", recurrence: Recurrence(every: .week, interval: 2)))
+        #expect(q("Water plants every other day").recurrence == Recurrence(every: .day, interval: 2))
+        #expect(q("Stretch daily").recurrence == Recurrence(every: .day))
+        #expect(q("Take out the bins every thursday") == QuickAdd(title: "Take out the bins", due: "2026-11-05", recurrence: Recurrence(every: .week)))
+        #expect(q("Every week review the budget tomorrow") == QuickAdd(title: "review the budget", due: "2026-11-04", recurrence: Recurrence(every: .week)))
+    }
+
+    @Test func ordinaryWordsStayInTheTitle() {
+        for t in ["Plan Friday dinner", "Fix high CPU usage", "Fix high priority bugs", "Sit in the sun", "Weekly review notes", "Clean every room", "Ask Tom", "Work on the deck"] {
+            #expect(QuickAdd.parse(t, labels: [], today: today) == QuickAdd(title: t))
+        }
+    }
+
+    @Test func ignoredFieldsStayInTheTitle() {
+        let q = QuickAdd.parse("Email report friday high priority", labels: [], today: today, ignoring: [.due])
+        #expect(q == QuickAdd(title: "Email report friday", priority: 2))
+        #expect(QuickAdd.parse("Stretch daily", labels: [], today: today, ignoring: [.repeats]) == QuickAdd(title: "Stretch daily"))
+        #expect(QuickAdd.parse("x due:tomorrow", labels: [], today: today, ignoring: [.due]).due == "2026-11-04")
+    }
 }
 
 @Suite struct SettingsTests {
@@ -296,6 +353,14 @@ struct FailingTransport: SyncTransport {
         m.load(try LedgerModel.snapshot(m.ledger.db))
         let i = m.quickCreate("Buy stamps due:2026-12-01 p:urgent #errands")!
         #expect(i.title == "Buy stamps" && i.dueDate == "2026-12-01" && i.priority == 1 && i.labels == [l.id] && i.status == .inbox)
+    }
+
+    @Test func quickCreateAppliesPlainLanguage() throws {
+        let m = try model()
+        let i = m.quickCreate("Water plants every 2 weeks low priority")!
+        #expect(i.title == "Water plants" && i.priority == 4 && i.recurrence == Recurrence(every: .week, interval: 2))
+        let kept = m.quickCreate("Stretch daily", ignoring: [.repeats])!
+        #expect(kept.title == "Stretch daily" && kept.recurrence == nil)
     }
 
     @Test func savedViewKeepsFilterAndLayout() throws {

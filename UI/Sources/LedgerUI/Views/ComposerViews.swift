@@ -1,7 +1,30 @@
 import LedgerCore
 import SwiftUI
 
-/// New issue: title first (shorthand `due:tomorrow p:high #label` works), optional notes, a few properties. ⌘Return saves.
+/// What the title's words were read as. Tapping a date, priority or repeat chip switches that reading off, so its words stay in the title.
+private struct ParsedChips: View {
+    @Environment(LedgerModel.self) private var model
+    let parsed: QuickAdd
+    @Binding var ignored: Set<QuickAdd.Field>
+
+    var body: some View {
+        HStack(spacing: 6) {
+            if let p = parsed.priority { chip(Priority(rawValue: p)?.title ?? "", .priority) }
+            if let d = parsed.due { chip(Format.due(d), .due) }
+            if let r = parsed.recurrence { chip("Every \(r.interval == 1 ? "" : "\(r.interval) ")\(r.every.rawValue)\(r.interval == 1 ? "" : "s")", .repeats) }
+            ForEach(parsed.labelIds, id: \.self) { id in if let l = model.label(id) { LabelChip(label: l) } }
+        }
+    }
+
+    private func chip(_ s: String, _ field: QuickAdd.Field) -> some View {
+        Button { ignored.insert(field) } label: {
+            Text(s).font(.caption2).padding(.horizontal, 6).padding(.vertical, 1).foregroundStyle(Theme.accent).background(Theme.accent.opacity(0.16), in: Capsule())
+        }
+        .buttonStyle(.plain).help("Keep these words in the title instead")
+    }
+}
+
+/// New issue: title first (plain words like "tomorrow high priority" and shorthand work, see `QuickAdd`), optional notes, a few properties. ⌘Return saves.
 struct NewIssueView: View {
     @Environment(LedgerModel.self) private var model
     @Environment(\.dismiss) private var dismiss
@@ -12,23 +35,18 @@ struct NewIssueView: View {
     @State private var projectID: String?
     @State private var labelIDs: [String] = []
     @State private var due: String?
+    @State private var ignored: Set<QuickAdd.Field> = []
     @FocusState private var focused: Bool
 
     init(status: Status) { _status = State(initialValue: status) }
 
     var body: some View {
-        let q = QuickAdd.parse(title, labels: model.labels)
+        let q = QuickAdd.parse(title, labels: model.labels, ignoring: ignored)
         VStack(alignment: .leading, spacing: 12) {
             Text("New issue").font(.headline)
             TextField("Issue title", text: $title).textFieldStyle(.plain).font(.title3)
                 .focused($focused).onSubmit(save)
-            if q.due != nil || q.priority != nil || !q.labelIds.isEmpty {
-                HStack(spacing: 6) {
-                    if let p = q.priority { chip(Priority(rawValue: p)?.title ?? "") }
-                    if let d = q.due { chip(Format.due(d)) }
-                    ForEach(q.labelIds, id: \.self) { id in if let l = model.label(id) { LabelChip(label: l) } }
-                }
-            }
+            if q.due != nil || q.priority != nil || q.recurrence != nil || !q.labelIds.isEmpty { ParsedChips(parsed: q, ignored: $ignored) }
             TextField("Add notes (Markdown)", text: $notes, axis: .vertical).textFieldStyle(.plain).lineLimit(3...8).foregroundStyle(Theme.dim)
             HStack(spacing: 8) {
                 Menu {
@@ -67,45 +85,37 @@ struct NewIssueView: View {
         .onAppear { focused = true }
     }
 
-    private func chip(_ s: String) -> some View {
-        Text(s).font(.caption2).padding(.horizontal, 6).padding(.vertical, 1).foregroundStyle(Theme.accent).background(Theme.accent.opacity(0.16), in: Capsule())
-    }
-
     private func save() {
         guard !title.trimmingCharacters(in: .whitespaces).isEmpty else { return }
         var extra: [String: SyncValue] = [:]
         if priority != 0 { extra["priority"] = .int(Int64(priority)) }
         if let due { extra["dueDate"] = .text(due) }
         if !labelIDs.isEmpty { extra["labels"] = .text(String(decoding: (try? JSONEncoder().encode(labelIDs)) ?? Data("[]".utf8), as: UTF8.self)) }
-        if let i = model.quickCreate(title, status: status, notes: notes, projectID: projectID, extra: extra) { model.select(i.id) }
+        if let i = model.quickCreate(title, status: status, notes: notes, projectID: projectID, extra: extra, ignoring: ignored) { model.select(i.id) }
         dismiss()
     }
 }
 
-/// The iPhone's quick add: just a title (shorthand works), status Inbox, one thumb.
+/// The iPhone's quick add: just a title (plain words and shorthand work), status Inbox, one thumb.
 struct QuickAddSheet: View {
     @Environment(LedgerModel.self) private var model
     @Environment(\.dismiss) private var dismiss
     @State private var title = ""
+    @State private var ignored: Set<QuickAdd.Field> = []
     @FocusState private var focused: Bool
     var status: Status = .inbox
 
     var body: some View {
-        let q = QuickAdd.parse(title, labels: model.labels)
+        let q = QuickAdd.parse(title, labels: model.labels, ignoring: ignored)
         VStack(alignment: .leading, spacing: 10) {
             HStack {
                 Text("New issue").font(.headline)
                 Spacer()
                 Button("Add") { add() }.fontWeight(.semibold).disabled(title.trimmingCharacters(in: .whitespaces).isEmpty)
             }
-            TextField("Title   (due:tomorrow  p:high  #label)", text: $title).focused($focused).onSubmit(add)
+            TextField("Title   (tomorrow, high priority, #label)", text: $title).focused($focused).onSubmit(add)
                 .textFieldStyle(.plain).font(.title3).submitLabel(.done)
-            HStack(spacing: 6) {
-                if let p = q.priority { Text(Priority(rawValue: p)?.title ?? "") }
-                if let d = q.due { Text(Format.due(d)) }
-                ForEach(q.labelIds, id: \.self) { id in if let l = model.label(id) { LabelChip(label: l) } }
-            }
-            .font(.caption).foregroundStyle(Theme.accent)
+            ParsedChips(parsed: q, ignored: $ignored)
             Spacer(minLength: 0)
         }
         .padding(16).background(Theme.bar)
@@ -114,7 +124,7 @@ struct QuickAddSheet: View {
 
     private func add() {
         guard !title.trimmingCharacters(in: .whitespaces).isEmpty else { return }
-        model.quickCreate(title, status: status)
+        model.quickCreate(title, status: status, ignoring: ignored)
         dismiss()
     }
 }

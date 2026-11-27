@@ -281,14 +281,15 @@ public final class LedgerModel {
         } catch { self.error = "\(error)"; return nil }
     }
 
-    /// A new issue from the composer or quick add; `title` may carry `due:`, `p:` and `#label` shorthand.
+    /// A new issue from the composer or quick add; `text` may carry plain phrases ("tomorrow high priority") and shorthand, see `QuickAdd`.
     @discardableResult
-    public func quickCreate(_ text: String, status: Status = .inbox, notes: String = "", projectID: String? = nil, parentID: String? = nil, extra: [String: SyncValue] = [:]) -> Issue? {
-        let q = QuickAdd.parse(text, labels: labels)
+    public func quickCreate(_ text: String, status: Status = .inbox, notes: String = "", projectID: String? = nil, parentID: String? = nil, extra: [String: SyncValue] = [:], ignoring: Set<QuickAdd.Field> = []) -> Issue? {
+        let q = QuickAdd.parse(text, labels: labels, ignoring: ignoring)
         var f = extra
         if !notes.isEmpty { f["description"] = .text(notes) }
         if let d = q.due { f["dueDate"] = .text(d) }
         if let p = q.priority { f["priority"] = .int(Int64(p)) }
+        if let r = q.recurrence, let json = try? JSONEncoder().encode(r) { f["recur"] = .text(String(decoding: json, as: UTF8.self)) }
         if let projectID { f["projectId"] = .text(projectID) }
         if let parentID { f["parentId"] = .text(parentID) }
         if case .project(let pid) = scope, projectID == nil { f["projectId"] = .text(pid) }

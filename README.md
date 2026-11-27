@@ -10,7 +10,7 @@ A personal task tracker in the style of Linear: native apps for Mac and iPhone t
 - **Automatic two-week cycles**: the current and next cycle always exist, and unfinished work in an ended cycle rolls into the current one.
 - **Recurring tasks**: completing a recurring issue creates the next occurrence with its due date advanced.
 - **Keyboard-first Mac app**: sidebar (Inbox, Current Cycle, All Issues, saved views), list and board layouts with customizable columns, an inspector for details, a ⌘K command palette and Linear's single-key shortcuts (C create, S status, P priority, L label, D due, J/K move, / search). Full-text search uses SQLite FTS5.
-- **iPhone app**: tabs for Today, Inbox, Cycle, All and Projects, a detail sheet, and quick add that understands shorthand for due date, priority and labels.
+- **iPhone app**: tabs for Today, Inbox, Cycle, All and Projects, a detail sheet, and quick add that reads plain words ("call the dentist tomorrow high priority", "water plants every 2 weeks") and shorthand for due date, priority and labels.
 - **Offline-first sync** across devices, and a one-time importer from a JSON export of Linear issues and cycles.
 
 ## How it works
@@ -77,7 +77,7 @@ claude mcp add ledger -- python3 "$PWD/mcp/ledger_mcp.py"
 
 ```bash
 swift test --package-path Core     # 17 tests: issue operations, sync and conflict rules, hub numbering, cycles, recurrence, Linear import
-swift test --package-path UI       # 28 tests: filters, grouping, command palette, quick-add parsing, sync settings, the model
+swift test --package-path UI       # 42 tests: filters, grouping, command palette, quick-add parsing, sync settings, the model
 swift test --package-path CLI      # 13 tests: commands end to end, including a live hub over HTTP
 swift build --package-path CLI -c release && python3 -m unittest discover -s mcp   # 3 tests: MCP protocol and tools
 ```
